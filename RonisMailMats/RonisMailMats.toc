@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: |cffff8c1aRoni's|r MailMats
+## Notes: Remembers your alts' professions and drafts mails with the reagents they can use.
+## Author: Roni
+## Version: 0.1.0
+## SavedVariables: RonisMailMatsDB
+## IconTexture: Interface\Icons\INV_Letter_15
+
+Data\Reagents.lua
+Core.lua
+UI.lua

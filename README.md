@@ -42,3 +42,31 @@ Regenerating recipes after a game patch:
     # download CSVs for SkillLineAbility, SkillLine, SpellReagents, SpellEffect from
     # https://wago.tools/db2/<Table>/csv?build=<build> into a folder, then:
     node RonisItemPedia/tools/gen_recipes.js <csv-folder> <build> > RonisItemPedia/Data/Recipes.lua
+
+## RonisMailMats — "Roni's MailMats"
+
+Mails reagents to the alt who can use them.
+
+- On login every character records its professions (and ranks).
+- Opening a mailbox docks a panel to the right of the mail window listing
+  your other characters on the same realm and faction, with a
+  **Send <profession> mats (N)** button per crafting profession.
+- Clicking a button switches to the Send Mail tab, fills in the recipient
+  and subject and attaches up to 12 matching stacks from your bags. Nothing
+  is sent: review the draft and press Send yourself. If more stacks remain,
+  press the button again after sending.
+- Hover a button to see which items and how many would be attached.
+- **Keep mats for my own professions** (on by default) never drafts items
+  the current character can use for its own professions.
+
+"Mats" for a profession are all items used as a reagent by any of its
+recipes (`Data/Reagents.lua`, generated from RonisItemPedia's recipe database
+by `tools/gen_reagents.js`). Soulbound and locked stacks are skipped.
+
+Commands: `/mailmats` lists known characters, `/mailmats forget <name>`,
+`/mailmats ignore <item>` / `unignore <item>` / `ignored` to keep specific
+items out of drafts.
+
+Regenerating after the recipe database changes:
+
+    node RonisMailMats/tools/gen_reagents.js > RonisMailMats/Data/Reagents.lua
