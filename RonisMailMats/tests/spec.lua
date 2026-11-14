@@ -534,4 +534,57 @@ return function(T)
         S.ns.OpenEditor("Mageybff")
         for _, b in ipairs(ed.sugButtons) do ok(not b._shown, "hidden when editing") end
     end)
+
+    -----------------------------------------------------------------------
+    -- Forever surnames: mail needs "First Last"
+    -----------------------------------------------------------------------
+    test("characters are saved and mailed under first name and surname", function()
+        local saved = T.Logout(T.Login({ name = "Silva", surname = "Moonbrook", class = "PRIEST", profs = TAILOR }))
+        ok(Char(saved, "Silva Moonbrook"), "saved with surname")
+        eq(Char(saved, "Silva"), nil, "not under the first name")
+        local S = MainAtMailbox(saved, { surname = "Hammer" })
+        eq(S.ns.me, "Main Hammer", "own full name")
+        local b = T.Button(S, "Tailoring")
+        eq(b.alt, "Silva Moonbrook", "button alt")
+        b:Click()
+        S.Advance(1)
+        eq(S.env.SendMailNameEditBox:GetText(), "Silva Moonbrook", "recipient has the surname")
+    end)
+
+    test("an entry from before surnames moves to the full name on login", function()
+        local old = T.Logout(T.Login({ name = "Silva", class = "PRIEST", profs = TAILOR }))
+        old = T.Logout(T.Login({ name = "Other", class = "MAGE" }, old))
+        -- a different character sharing the first name keeps its old entry
+        local saved = T.Logout(T.Login({ name = "Silva", surname = "Moonbrook", class = "PRIEST", profs = TAILOR }, old))
+        ok(Char(saved, "Silva Moonbrook"), "moved")
+        eq(Char(saved, "Silva"), nil, "old key gone")
+        local saved2 = T.Logout(T.Login({ name = "Other", surname = "Person", class = "WARRIOR" }, old))
+        ok(Char(saved2, "Other"), "other class: old entry kept")
+    end)
+
+    test("alts saved without a surname are flagged until they log in", function()
+        local old = T.Logout(T.Login({ name = "Silva", class = "PRIEST", profs = TAILOR }))
+        local S = MainAtMailbox(old, { surname = "Hammer" })
+        ok(S.ns.NeedsFullName("Silva"), "flagged")
+        ok(not S.ns.NeedsFullName("Silva Moonbrook"), "full name fine")
+    end)
+
+    test("recipients can have a surname", function()
+        local S = MainAtMailbox(nil, { surname = "Hammer", bags = Bags(LOCKBOX_BAGS) })
+        S.Slash("/mailmats", "target bob smith: tailoring, scrolls")
+        local t = S.env.RonisMailMatsDB.targets[REALM]["Bob smith"]
+        ok(t, "stored with surname")
+        eq(T.Button(S, "Send all to Bob smith"):GetText(), "Send all to Bob smith (3)", "button")
+        S.Slash("/mailmats", "untarget bob smith")
+        eq(S.env.RonisMailMatsDB.targets[REALM]["Bob smith"], nil, "removed")
+    end)
+
+    test("suggestions keep surnames but skip NPC senders", function()
+        local S = MainAtMailbox(nil, { surname = "Hammer",
+            friends = { { "Ann Lee", "Mage", 20, true } },
+            inbox = { { "Stormwind Auction House" }, { "Pen Pal" } } })
+        local names = {}
+        for _, s in ipairs(S.ns.Suggestions(20)) do names[#names + 1] = s.name end
+        eq(table.concat(names, ","), "Ann Lee,Pen Pal", "suggested")
+    end)
 end

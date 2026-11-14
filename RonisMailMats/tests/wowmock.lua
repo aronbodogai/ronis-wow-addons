@@ -7,7 +7,7 @@
 --
 -- opts = {
 --   flavor   = "forever" (GetProfessions API) | "classic" (skill line API),
---   name, realm, faction, class, level,
+--   name, surname (Forever: UnitName gives both), realm, faction, class, level,
 --   profs    = { { line = 197, name = "Tailoring", rank = 150, max = 225 }, ... },
 --   profsReadyAt = seconds after login before the profession API answers,
 --   skills   = { { id = 633, name = "Lockpicking", rank = 80, max = 100 } }:
@@ -315,7 +315,7 @@ function mock.NewSession(opts)
     -- Player, items
     -------------------------------------------------------------------------
     env.GetRealmName = function() return opts.realm or "Test Realm" end
-    env.UnitName = function(u) if u == "player" then return opts.name end end
+    env.UnitName = function(u) if u == "player" then return opts.name, opts.surname end end
     env.UnitClass = function(u)
         if u == "player" then
             local c = opts.class or "MAGE"

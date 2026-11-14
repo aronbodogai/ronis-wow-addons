@@ -63,7 +63,8 @@ function ns.Suggestions(max)
 
     local function Add(name, why, class, level)
         name = Short(name)
-        if not name or name == "" or name:find("%s") then return end -- NPC senders have spaces
+        -- a first name and a surname at most: NPC senders ("Stormwind Auction House") have more words
+        if not name or name == "" or name:find("%s%S+%s") then return end
         local key = name:lower()
         if seen[key] then return end
         seen[key] = true

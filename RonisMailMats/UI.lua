@@ -133,7 +133,8 @@ function ns.Refresh()
             nh = nh + 1
             local h = GetHeader(nh)
             h:SetPoint("TOPLEFT", PAD, y)
-            h:SetText(("|c%s%s|r |cff999999%s|r"):format(ClassColor(c.class), alt, ns.ProfString(c)))
+            local note = ns.NeedsFullName(alt) and " |cffff6060(log in once on this alt: surname unknown)|r" or ""
+            h:SetText(("|c%s%s|r |cff999999%s|r%s"):format(ClassColor(c.class), alt, ns.ProfString(c), note))
             y = y - h:GetStringHeight() - 4
             for _, p in ipairs(crafts) do
                 nb = nb + 1

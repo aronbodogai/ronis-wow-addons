@@ -48,7 +48,10 @@ Regenerating recipes after a game patch:
 
 Mails reagents to the alt who can use them.
 
-- On login every character records its professions (and ranks).
+- On login every character records its professions (and ranks) under its
+  full name: Forever characters have a first name and a surname, and mail
+  needs both. Alts saved by a version before 0.6 are marked "surname
+  unknown" until they log in once.
 - Opening a mailbox docks a panel to the right of the mail window listing
   your other characters on the same realm and faction, with a
   **Send <profession> mats (N)** button per crafting profession.
@@ -93,8 +96,8 @@ by `tools/gen_reagents.js`). Soulbound and locked stacks are skipped.
 
 Commands: `/mailmats` lists known characters, `/mailmats forget <name>`,
 `/mailmats ignore <item>` / `unignore <item>` / `ignored` to keep specific
-items out of drafts. `/mailmats target <name> tailoring, scrolls` adds or changes a recipient,
-`/mailmats untarget <name>` removes one, `/mailmats targets` lists them.
+items out of drafts. `/mailmats target <first last>: tailoring, scrolls` adds or changes a recipient,
+`/mailmats untarget <first last>` removes one, `/mailmats targets` lists them.
 `/mailmats scan` re-reads this character's
 professions; `/mailmats selftest` checks the client API the addon needs and
 shows what it reads.

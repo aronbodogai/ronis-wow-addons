@@ -148,10 +148,27 @@ local function InitDB()
     db.targets = db.targets or {} -- [realm][name] = { cats = { "Tailoring", ... } }: friends, guildies, anyone
     ns.db = db
     ns.realm = GetRealmName()
-    ns.me = UnitName("player")
+    -- WoW Forever characters have a first name and a surname; UnitName gives
+    -- them as two values ("Silva", "Moonbrook") and mail needs both, joined
+    -- with a space. Other clients give no second value for the player.
+    local first, surname = UnitName("player")
+    ns.me = (surname and surname ~= "") and (first .. " " .. surname) or first
+    ns.surnames = ns.me ~= first
     ns.faction = UnitFactionGroup("player")
     db.chars[ns.realm] = db.chars[ns.realm] or {}
     db.targets[ns.realm] = db.targets[ns.realm] or {}
+    -- versions before 0.6 filed this character under its first name only
+    local chars = db.chars[ns.realm]
+    if ns.surnames and chars[first] and not chars[ns.me] then
+        local _, class = UnitClass("player")
+        if chars[first].class == class then chars[ns.me], chars[first] = chars[first], nil end
+    end
+end
+
+-- On a client with surnames, an alt saved by an older version under its
+-- first name only cannot be mailed until it logs in once.
+function ns.NeedsFullName(name)
+    return ns.surnames and not name:find(" ")
 end
 
 ---------------------------------------------------------------------------
@@ -485,9 +502,12 @@ SlashCmdList.RONISMAILMATS = function(msg)
         ns.Print((link or ("item " .. id)) .. (cmd == "ignore" and " will never be drafted." or " can be drafted again."))
         if ns.Refresh then ns.Refresh() end
     elseif cmd == "target" or cmd == "untarget" then
-        local name, rest = arg:match("^(%S+)%s*(.-)$")
+        -- "Name Surname: tailoring, scrolls", or "Name tailoring, scrolls"
+        local name, rest = arg:match("^([^:]+):%s*(.-)$")
+        if name then name = strtrim(name) else name, rest = arg:match("^(%S+)%s*(.-)$") end
+        if cmd == "untarget" and arg ~= "" then name, rest = strtrim(arg), "" end
         if not name then
-            return ns.Print("Usage: /mailmats target <name> <category>, <category>... | /mailmats untarget <name>")
+            return ns.Print("Usage: /mailmats target <first last>: <category>, <category>... | /mailmats untarget <first last>")
         end
         local cats = {}
         if cmd == "target" then
@@ -531,7 +551,7 @@ SlashCmdList.RONISMAILMATS = function(msg)
             ns.Print(("  %s (%s, %s): %s"):format(name, c.faction or "?", c.level or "?", ProfString(c)))
         end
         ns.Print("/mailmats scan | selftest | forget <name> | ignore <item> | unignore <item> | ignored")
-        ns.Print("/mailmats target <name> <category>, ... | untarget <name> | targets")
+        ns.Print("/mailmats target <first last>: <category>, ... | untarget <first last> | targets")
     end
 end
 
