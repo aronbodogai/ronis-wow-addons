@@ -2,9 +2,12 @@
 ## Title: |cffff8c1aRoni's|r ItemPedia
 ## Notes: Alt + Left-Click any item to open a Factoriopedia-style item window.
 ## Author: Roni
-## Version: 0.1.0
+## Version: 0.2.0
 ## SavedVariables: RonisItemPediaDB
+## OptionalDeps: QuestieDB, Questie, Auctionator
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
 
+Data\Recipes.lua
 Core.lua
+Sources.lua
 UI.lua

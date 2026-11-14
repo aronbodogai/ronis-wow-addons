@@ -13,7 +13,7 @@ local RW       = FW - LW - PAD * 2 - 8  -- right panel width
 local CW       = RW - 32             -- detail content width
 local COLS     = 5                   -- left grid columns
 local CELL     = 42                  -- left grid cell (slot 38 + gap)
-local TABS     = { "Bags", "Recent", "Recipes" }
+local TABS     = { "Bags", "Recent" }
 
 local UI = { stack = {}, pos = 0, sections = {}, nsec = 0, listSlots = {} }
 ns.UI = UI
@@ -38,8 +38,8 @@ end
 ---------------------------------------------------------------------------
 local function Slot_OnEnter(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    if self.link then
-        GameTooltip:SetHyperlink(self.link)
+    if self.link or self.tipLink then
+        GameTooltip:SetHyperlink(self.link or self.tipLink)
     elseif self.label then
         GameTooltip:SetText(self.label, 1, 1, 1)
     end
@@ -94,7 +94,7 @@ local function SetBorder(b, q, selected)
 end
 
 function ns.SetSlot(b, link, count, extra, selected)
-    b.link, b.label, b.extra = link, nil, extra
+    b.link, b.tipLink, b.label, b.extra = link, nil, nil, extra
     b.icon:SetTexture(ns.GetItemIcon(ns.ItemID(link)) or QUESTION)
     local q = select(3, ns.GetItemInfo(link))
     SetBorder(b, q, selected)
@@ -102,10 +102,11 @@ function ns.SetSlot(b, link, count, extra, selected)
     b:Show()
 end
 
--- For things that are not items (e.g. enchants)
-function ns.SetSlotPlain(b, texture, label, extra)
-    b.link, b.label, b.extra = nil, label, extra
-    b.icon:SetTexture(texture or QUESTION)
+-- For spells that create no item (enchants): spell tooltip, not navigable
+function ns.SetSlotSpell(b, spellID, extra)
+    local name, icon = ns.SpellInfo(spellID)
+    b.link, b.tipLink, b.label, b.extra = nil, "spell:" .. spellID, name, extra
+    b.icon:SetTexture(icon or QUESTION)
     SetBorder(b, nil)
     b.count:SetText("")
     b:Show()
@@ -212,68 +213,174 @@ end
 ---------------------------------------------------------------------------
 -- Section builders
 ---------------------------------------------------------------------------
+local ARROW = "Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up"
+
 local function MadeText(r)
-    local lo, hi = r.made[1] or 1, r.made[2] or 1
-    if hi > lo then return lo .. "-" .. hi end
-    return lo
+    if r.max > r.min then return r.min .. "-" .. r.max end
+    return r.min
 end
 
-function UI:SectionRecipe(id, y)
-    local keys = ns.madeBy[id]
-    if not keys then return y end
-    local s = self:AcquireSection(#keys > 1 and ("Recipes (" .. #keys .. ")") or "Recipe", y)
+local function ChanceText(c)
+    if c >= 10 then return string.format("%.0f%%", c) end
+    if c >= 1 then return string.format("%.1f%%", c) end
+    return string.format("%.2f%%", c)
+end
+
+-- Draws "Profession - Recipe" and "reagents -> product" at cy; returns new cy.
+local function DrawRecipe(s, r, cy, currentID)
+    local lbl = s:Text("GameFontHighlightSmall", 0.75, 0.75, 0.75)
+    lbl:SetPoint("TOPLEFT", 10, -cy)
+    lbl:SetText("|cffffd100" .. r.prof .. "|r  -  " .. (ns.SpellInfo(r.spell) or ("Spell " .. r.spell)))
+    cy = cy + 16
+    local x = 10
+    for _, rg in ipairs(r.reagents) do
+        if x > CW - 90 then x = 10; cy = cy + 40 end
+        local b = s:Slot(36)
+        b:SetPoint("TOPLEFT", x, -cy)
+        ns.SetSlot(b, "item:" .. rg[1], rg[2], nil, rg[1] == currentID)
+        x = x + 40
+    end
+    local arrow = s:Tex()
+    arrow:SetTexture(ARROW)
+    arrow:SetSize(28, 28)
+    arrow:SetPoint("TOPLEFT", x, -cy - 4)
+    x = x + 32
+    local p = s:Slot(36)
+    p:SetPoint("TOPLEFT", x, -cy)
+    if r.product then
+        ns.SetSlot(p, "item:" .. r.product, MadeText(r), nil, r.product == currentID)
+    else
+        ns.SetSlotSpell(p, r.spell, r.prof)
+    end
+    return cy + 44
+end
+
+function UI:SectionCreatedBy(id, y)
+    local list = ns.madeBy[id]
+    if not list then return y end
+    local s = self:AcquireSection("Created by (" .. #list .. ")", y)
     local cy = SECTION_TOP
-    for _, key in ipairs(keys) do
-        local r = ns.db.recipes[key]
-        local lbl = s:Text("GameFontHighlightSmall", 0.6, 0.6, 0.6)
+    for _, idx in ipairs(list) do cy = DrawRecipe(s, ns.Recipe(idx), cy, id) end
+    return Finish(s, cy - 4, y)
+end
+
+-- Recipe items (patterns, plans, formulas...) show the recipe they teach.
+function UI:SectionTeaches(src, id, y)
+    local idx = src.teaches and ns.bySpell[src.teaches]
+    if not idx then return y end
+    local s = self:AcquireSection("Teaches", y)
+    return Finish(s, DrawRecipe(s, ns.Recipe(idx), SECTION_TOP, id) - 4, y)
+end
+
+function UI:SectionUsedIn(id, y)
+    local list = ns.usedIn[id]
+    if not list then return y end
+    local s = self:AcquireSection("Used in (" .. #list .. ")", y)
+    local groups, order = {}, {}
+    for _, idx in ipairs(list) do
+        local r = ns.Recipe(idx)
+        if not groups[r.prof] then
+            groups[r.prof] = {}
+            order[#order + 1] = r.prof
+        end
+        table.insert(groups[r.prof], r)
+    end
+    table.sort(order)
+    local itemName = ns.GetItemInfo(id) or "this item"
+    local cy = SECTION_TOP
+    for _, prof in ipairs(order) do
+        local lbl = s:Text("GameFontNormalSmall", 1, 0.82, 0)
         lbl:SetPoint("TOPLEFT", 10, -cy)
-        lbl:SetText("Made by |cffffd100" .. r.prof .. "|r  -  " .. r.name)
+        lbl:SetText(prof .. " (" .. #groups[prof] .. ")")
         cy = cy + 16
         local x = 10
-        for _, rg in ipairs(r.reagents) do
-            if x > CW - 90 then x = 10; cy = cy + 40 end
+        for _, r in ipairs(groups[prof]) do
+            if x > CW - 46 then x = 10; cy = cy + 40 end
+            local need = 1
+            for _, rg in ipairs(r.reagents) do
+                if rg[1] == id then need = rg[2] end
+            end
+            local extra = r.prof .. " - needs " .. need .. "x " .. itemName
             local b = s:Slot(36)
             b:SetPoint("TOPLEFT", x, -cy)
-            ns.SetSlot(b, "item:" .. rg[1], rg[2])
+            if r.product then
+                ns.SetSlot(b, "item:" .. r.product, MadeText(r), extra)
+            else
+                ns.SetSlotSpell(b, r.spell, extra)
+            end
             x = x + 40
         end
-        local arrow = s:Tex()
-        arrow:SetTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up")
-        arrow:SetSize(28, 28)
-        arrow:SetPoint("TOPLEFT", x, -cy - 4)
-        x = x + 32
-        local p = s:Slot(36)
-        p:SetPoint("TOPLEFT", x, -cy)
-        if r.product then
-            ns.SetSlot(p, "item:" .. r.product, MadeText(r), nil, r.product == id)
-        else
-            ns.SetSlotPlain(p, r.icon, r.name, r.prof)
-        end
         cy = cy + 44
+    end
+    return Finish(s, cy - 4, y)
+end
+
+local RANK_COLOR = { Boss = "|cffff6040", Elite = "|cffffd100", ["Rare Elite"] = "|cffc0c0ff", Rare = "|cffc0c0ff" }
+
+local function NpcText(row)
+    local t = (RANK_COLOR[row.rank] or "|cffffffff") .. row.name .. "|r"
+    local meta = {}
+    if row.rank then meta[#meta + 1] = row.rank end
+    if row.level then meta[#meta + 1] = "Lv " .. row.level end
+    if row.zone then meta[#meta + 1] = row.zone end
+    if #meta > 0 then t = t .. "  |cff8c8c8c" .. table.concat(meta, "  -  ") .. "|r" end
+    return t
+end
+
+local function ObjectText(row)
+    return row.name .. (row.zone and ("  |cff8c8c8c" .. row.zone .. "|r") or "")
+end
+
+local function QuestText(row)
+    local lvl = (type(row.level) == "number" and row.level > 0) and ("|cff8c8c8c[" .. row.level .. "]|r ") or ""
+    return lvl .. "|cffffd100" .. row.name .. "|r"
+end
+
+function UI:SectionRows(title, rows, total, fmt, y)
+    if #rows == 0 then return y end
+    total = total or #rows
+    local s = self:AcquireSection(title .. " (" .. total .. ")", y)
+    local cy = SECTION_TOP
+    local anyChance = false
+    for _, row in ipairs(rows) do
+        local l = s:Text("GameFontHighlightSmall")
+        l:SetPoint("TOPLEFT", 10, -cy)
+        l:SetWidth(CW - 80)
+        l:SetWordWrap(false)
+        l:SetText(fmt(row))
+        if row.chance then
+            anyChance = true
+            local c = s:Text("GameFontNormalSmall", 1, 0.82, 0)
+            c:SetPoint("TOPRIGHT", -10, -cy)
+            c:SetJustifyH("RIGHT")
+            c:SetText(ChanceText(row.chance))
+        end
+        cy = cy + 16
+    end
+    if total > #rows then
+        local more = s:Text("GameFontDisableSmall")
+        more:SetPoint("TOPLEFT", 10, -cy)
+        more:SetText("...and " .. (total - #rows) .. " more")
+        cy = cy + 16
+    end
+    if anyChance then
+        local note = s:Text("GameFontDisableSmall")
+        note:SetPoint("TOPRIGHT", -10, -cy - 2)
+        note:SetText("drop chance from Questie (Wowhead data)")
+        cy = cy + 16
     end
     return Finish(s, cy, y)
 end
 
-function UI:SectionUsedIn(id, y)
-    local keys = ns.usedIn[id]
-    if not keys then return y end
-    local s = self:AcquireSection("Used in (" .. #keys .. ")", y)
+function UI:SectionContainers(src, y)
+    if #src.containers == 0 then return y end
+    local s = self:AcquireSection("Contained in (" .. #src.containers .. ")", y)
     local cy, x = SECTION_TOP, 10
-    for _, key in ipairs(keys) do
-        local r = ns.db.recipes[key]
-        local need = 1
-        for _, rg in ipairs(r.reagents) do
-            if rg[1] == id then need = rg[2] end
-        end
+    for _, cid in ipairs(src.containers) do
         if x > CW - 46 then x = 10; cy = cy + 40 end
         local b = s:Slot(36)
         b:SetPoint("TOPLEFT", x, -cy)
-        local extra = r.prof .. ": " .. r.name .. " needs " .. need
-        if r.product then
-            ns.SetSlot(b, "item:" .. r.product, nil, extra)
-        else
-            ns.SetSlotPlain(b, r.icon, r.name, extra)
-        end
+        ns.SetSlot(b, "item:" .. cid)
         x = x + 40
     end
     return Finish(s, cy + 40, y)
@@ -329,11 +436,12 @@ function UI:SectionProperties(link, id, info, y)
         v:SetText(rw[2])
         cy = cy + math.max(16, v:GetStringHeight() + 4)
     end
-    if not next(ns.db.recipes) then
+    if not ns.HasQuestieDB() then
         local hint = s:Text("GameFontDisableSmall")
         hint:SetPoint("TOPLEFT", 10, -cy - 4)
         hint:SetWidth(CW - 20)
-        hint:SetText("Tip: open your profession windows once so recipes show up here.")
+        hint:SetJustifyH("LEFT")
+        hint:SetText("Enable QuestieDB (installed with Questie) to see drops, vendors and quests.")
         cy = cy + 20
     end
     return Finish(s, cy, y)
@@ -520,7 +628,12 @@ function UI:Create()
     self.search = search
 
     self.tabs = {}
-    for i, name in ipairs(TABS) do self.tabs[i] = MakeTab(left, name, i) end
+    local validTab = false
+    for i, name in ipairs(TABS) do
+        self.tabs[i] = MakeTab(left, name, i)
+        if name == ns.db.tab then validTab = true end
+    end
+    if not validTab then ns.db.tab = TABS[1] end
 
     local ls = CreateFrame("ScrollFrame", "RonisItemPediaListScroll", left, "UIPanelScrollFrameTemplate")
     ls:SetPoint("TOPLEFT", 6, -62)
@@ -604,9 +717,6 @@ function UI:GatherList()
         SortByQualityName(list)
     elseif tab == "Recent" then
         for _, l in ipairs(ns.db.history) do add(l) end
-    else
-        for id in pairs(ns.known) do add("item:" .. id) end
-        SortByQualityName(list)
     end
 
     local query = strtrim(self.search:GetText() or ""):lower()
@@ -624,7 +734,6 @@ end
 local EMPTY_TEXT = {
     Bags = "Your bags are empty.",
     Recent = "Items you inspect show up here.",
-    Recipes = "Open a profession window to teach the pedia its recipes.",
 }
 
 function UI:RefreshList()
@@ -708,8 +817,18 @@ function UI:Render()
     self.hdrSub:SetText(sub)
 
     local y = 0
-    y = self:SectionRecipe(id, y)
+    local ok, src = pcall(ns.GetSources, id)
+    if not ok or type(src) ~= "table" then
+        src = { drops = {}, objects = {}, containers = {}, vendors = {}, quests = {} }
+    end
+    y = self:SectionCreatedBy(id, y)
+    y = self:SectionTeaches(src, id, y)
     y = self:SectionUsedIn(id, y)
+    y = self:SectionRows("Dropped by", src.drops, src.dropsTotal, NpcText, y)
+    y = self:SectionContainers(src, y)
+    y = self:SectionRows("Gathered from", src.objects, src.objectsTotal, ObjectText, y)
+    y = self:SectionRows("Sold by", src.vendors, src.vendorsTotal, NpcText, y)
+    y = self:SectionRows("Quest reward", src.quests, nil, QuestText, y)
     y = self:SectionProperties(link, id, info, y)
     y = self:SectionTooltip(full or link, y)
     self.content:SetHeight(math.max(1, y))
