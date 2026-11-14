@@ -290,20 +290,9 @@ local function BuildEditor()
     hint:SetPoint("TOPLEFT", PAD, -56)
     hint:SetText("Sends one mail with all of:")
 
-    editor.boxes = {}
+    -- one checkbox per group; made and placed by Relayout (custom groups come and go)
+    editor.boxes, editor.boxByCat = {}, {}
     local y = -72
-    for _, p in ipairs(ns.Categories()) do
-        local cb = CreateFrame("CheckButton", nil, editor, "UICheckButtonTemplate")
-        cb:SetSize(22, 22)
-        cb:SetPoint("TOPLEFT", PAD - 4, y)
-        cb.label = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        cb.label:SetPoint("LEFT", cb, "RIGHT", 2, 0)
-        cb.label:SetText(p .. (p == "Lockpicking" and " (lockboxes)" or p == "Comprehension" and " (scrolls)" or ""))
-        cb.cat = p
-        editor.boxes[#editor.boxes + 1] = cb
-        y = y - 20
-    end
-    y = y - 6
 
     local function Btn(text, x, fn)
         local b = CreateFrame("Button", nil, editor, "UIPanelButtonTemplate")
@@ -344,9 +333,46 @@ local function BuildEditor()
     editor.sugEmpty:SetWidth(EDIT_W - 2 * PAD)
     editor.sugEmpty:SetJustifyH("LEFT")
     editor.sugEmpty:SetText("Nobody to suggest: no friends, guild members or mail partners who are not already here.")
+    editor.sugButtons = {}
+end
+
+-- Places a checkbox for every current group, then the buttons and the
+-- suggestions title below them.
+local function Relayout()
+    local y = -72
+    for _, cb in pairs(editor.boxByCat) do cb:Hide() end
+    editor.boxes = {}
+    for _, p in ipairs(ns.Categories()) do
+        local cb = editor.boxByCat[p]
+        if not cb then
+            cb = CreateFrame("CheckButton", nil, editor, "UICheckButtonTemplate")
+            cb:SetSize(22, 22)
+            cb.label = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            cb.label:SetPoint("LEFT", cb, "RIGHT", 2, 0)
+            cb.label:SetText(p .. (p == "Lockpicking" and " (lockboxes)" or p == "Comprehension" and " (scrolls)"
+                or (ns.IsCustomGroup(p) and " (your group)" or "")))
+            cb.cat = p
+            editor.boxByCat[p] = cb
+        end
+        cb:ClearAllPoints()
+        cb:SetPoint("TOPLEFT", PAD - 4, y)
+        cb:Show()
+        editor.boxes[#editor.boxes + 1] = cb
+        y = y - 20
+    end
+    y = y - 6
+    local w = (EDIT_W - 2 * PAD - 8) / 3
+    for i, b in ipairs({ editor.save, editor.delete, editor.cancel }) do
+        b:ClearAllPoints()
+        b:SetPoint("TOPLEFT", PAD + (i - 1) * (w + 4), y)
+    end
+    y = y - 30
+    editor.sugTitle:ClearAllPoints()
+    editor.sugTitle:SetPoint("TOPLEFT", PAD, y)
+    editor.sugEmpty:ClearAllPoints()
+    editor.sugEmpty:SetPoint("TOPLEFT", PAD, y - 18)
     editor.baseY = y
     editor.baseH = -y + PAD
-    editor.sugButtons = {}
 end
 
 local function Suggest(self)
@@ -395,6 +421,7 @@ function ns.OpenEditor(name)
     if not panel then return end
     if not editor then BuildEditor() end
     editor.editing = name or false
+    Relayout()
     editor.nameBox:SetText(name or "")
     local want = {}
     for _, p in ipairs(name and ns.TargetCats(name) or {}) do want[p] = true end

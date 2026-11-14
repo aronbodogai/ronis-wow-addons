@@ -90,6 +90,15 @@ Mails reagents to the alt who can use them.
     out. Clicking a suggestion fills in the name; a mage also gets scrolls
     ticked and a rogue lockboxes.
 
+- **Groups window** (minimap button, or `/mailmats groups [group]`): every
+  group (each profession's mats, lockboxes, scrolls, your own groups) with
+  its items, a page at a time. Remove an item with its **X**; add one by
+  dropping it on the window or typing its id, link or name. Edited built-in
+  groups show in gold and have **Reset to default**. **New group** makes a
+  group of your own (blue), which you can give to recipients like any
+  other; **Delete group** removes it and takes it off every recipient.
+  Drag the minimap button to move it; `/mailmats minimap` hides or shows it.
+
 "Mats" for a profession are all items used as a reagent by any of its
 recipes (`Data/Reagents.lua`, generated from RonisItemPedia's recipe database
 by `tools/gen_reagents.js`). Soulbound and locked stacks are skipped.

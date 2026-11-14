@@ -587,4 +587,116 @@ return function(T)
         for _, s in ipairs(S.ns.Suggestions(20)) do names[#names + 1] = s.name end
         eq(table.concat(names, ","), "Ann Lee,Pen Pal", "suggested")
     end)
+
+    -----------------------------------------------------------------------
+    -- Groups window and minimap button
+    -----------------------------------------------------------------------
+    local function Win(S) return S.env.RonisMailMatsGroups end
+    local function Rows(S)
+        local out = {}
+        for _, f in ipairs(S.frames) do
+            if f._parent == Win(S) and rawget(f, "remove") and f._shown then out[#out + 1] = f end
+        end
+        return out
+    end
+    local function RowFor(S, id)
+        for _, r in ipairs(Rows(S)) do if r.id == id then return r end end
+    end
+
+    test("/mailmats groups shows the items in a group", function()
+        local S = MainAtMailbox(nil)
+        S.Slash("/mailmats", "groups tailoring")
+        ok(Win(S) and Win(S):IsShown(), "window open")
+        local n = 0
+        for _ in pairs(S.ns.IS_REAGENT.Tailoring) do n = n + 1 end
+        contains({ Win(S).title:GetText() }, "Tailoring.*" .. n .. " items, built%-in", "title")
+        eq(#Rows(S), 12, "a page of rows")
+        ok(Win(S).next:IsEnabled(), "more pages")
+        Win(S).next:Click()
+        contains({ Win(S).pageText:GetText() }, "Page 2 /", "page 2")
+    end)
+
+    test("removing and re-adding items, and reset", function()
+        local S = MainAtMailbox(TailorAltSaved(), { bags = Bags(MAIN_BAGS) })
+        eq(T.Button(S, "Tailoring"):GetText(), "Send Tailoring mats (3)", "before")
+        S.Slash("/mailmats", "groups Tailoring")
+        -- find Wool Cloth on whatever page it is
+        local row
+        for _ = 1, 20 do
+            row = RowFor(S, 2592)
+            if row or not Win(S).next:IsEnabled() then break end
+            Win(S).next:Click()
+        end
+        ok(row, "Wool Cloth listed")
+        row.remove:Click()
+        eq(S.ns.IS_REAGENT.Tailoring[2592], nil, "removed")
+        ok(S.ns.GroupEdited("Tailoring"), "marked edited")
+        eq(T.Button(S, "Tailoring"):GetText(), "Send Tailoring mats (2)", "button follows")
+        Win(S).addBox:SetText("2592")
+        Win(S).add:Click()
+        ok(S.ns.IS_REAGENT.Tailoring[2592], "added back by id")
+        ok(not S.ns.GroupEdited("Tailoring"), "same as default again")
+        Win(S).addBox:SetText("6948") -- Hearthstone
+        Win(S).add:Click()
+        ok(S.ns.IS_REAGENT.Tailoring[6948], "extra item added")
+        Win(S).reset:Click()
+        eq(S.ns.IS_REAGENT.Tailoring[6948], nil, "reset")
+        -- edits survive a relog
+        S.ns.GroupRemove("Tailoring", 2589)
+        local S2 = MainAtMailbox(T.Logout(S), { bags = Bags(MAIN_BAGS) })
+        eq(S2.ns.IS_REAGENT.Tailoring[2589], nil, "kept after relog")
+    end)
+
+    test("dropping an item on the window adds it", function()
+        local S = MainAtMailbox(nil, { bags = Bags({ { 6948, 1 } }) })
+        S.Slash("/mailmats", "groups cooking")
+        S.env.C_Container.PickupContainerItem(0, 1)
+        Win(S)._scripts.OnReceiveDrag(Win(S))
+        ok(S.ns.IS_REAGENT.Cooking[6948], "added")
+        ok(not S.env.CursorHasItem(), "cursor cleared")
+    end)
+
+    test("custom groups: create, fill, give to a recipient, delete", function()
+        local S = MainAtMailbox(nil, { bags = Bags(GEAR_BAGS) })
+        S.Slash("/mailmats", "groups")
+        Win(S).newBox:SetText("Bob stuff")
+        Win(S).new:Click()
+        contains({ Win(S).title:GetText() }, "Bob stuff.*0 items, your group", "new group selected")
+        Win(S).addBox:SetText("9001")
+        Win(S).add:Click()
+        Win(S).addBox:SetText("9006")
+        Win(S).add:Click()
+        S.Slash("/mailmats", "target Bob: bob stuff, tailoring")
+        eq(table.concat(S.env.RonisMailMatsDB.targets[REALM].Bob.cats, ","), "Tailoring,Bob stuff", "custom group on recipient")
+        eq(T.Button(S, "Send all to Bob"):GetText(), "Send all to Bob (3)", "hood + ring + linen; the soulbound hood stays")
+        -- the recipient editor offers the custom group too
+        S.ns.OpenEditor("Bob")
+        local ticked = {}
+        for _, cb in ipairs(S.env.RonisMailMatsEditor.boxes) do if cb:GetChecked() then ticked[#ticked + 1] = cb.cat end end
+        eq(table.concat(ticked, ","), "Tailoring,Bob stuff", "editor ticks the custom group")
+        -- duplicate names are refused
+        Win(S).newBox:SetText("tailoring")
+        Win(S).new:Click()
+        contains(S.printLog, "already a group called Tailoring", "duplicate")
+        -- delete
+        S.Slash("/mailmats", "groups bob stuff")
+        Win(S).reset:Click()
+        eq(S.env.RonisMailMatsDB.groups.custom["Bob stuff"], nil, "deleted")
+        eq(table.concat(S.env.RonisMailMatsDB.targets[REALM].Bob.cats, ","), "Tailoring", "taken off the recipient")
+    end)
+
+    test("minimap button opens the groups window and can be hidden", function()
+        local S = MainAtMailbox(nil)
+        local b = S.env.RonisMailMatsMinimapButton
+        ok(b and b:IsShown(), "button shown")
+        eq(b:GetParent(), S.env.Minimap, "on the minimap")
+        b._scripts.OnClick(b, "LeftButton")
+        ok(Win(S):IsShown(), "window opened")
+        b._scripts.OnClick(b, "LeftButton")
+        ok(not Win(S):IsShown(), "toggled closed")
+        S.Slash("/mailmats", "minimap")
+        ok(not b:IsShown(), "hidden")
+        local S2 = MainAtMailbox(T.Logout(S))
+        ok(not S2.env.RonisMailMatsMinimapButton:IsShown(), "stays hidden after relog")
+    end)
 end

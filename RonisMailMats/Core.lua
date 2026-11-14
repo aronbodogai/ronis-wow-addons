@@ -44,11 +44,13 @@ end
 ---------------------------------------------------------------------------
 -- Reagent lookup: REAGENTS[prof] = {id,...}  ->  IS_REAGENT[prof][id] = true
 ---------------------------------------------------------------------------
-ns.IS_REAGENT = {}
+-- BASE_GROUP[cat] is what the data files say; IS_REAGENT[cat] is that plus
+-- your own edits (db.groups, see "Groups" below), and your custom groups.
+ns.BASE_GROUP = {}
 for prof, ids in pairs(ns.REAGENTS) do
     local set = {}
     for _, id in ipairs(ids) do set[id] = true end
-    ns.IS_REAGENT[prof] = set
+    ns.BASE_GROUP[prof] = set
 end
 
 -- Items that need a non-crafting skill (Data/SkillItems.lua): a rogue's
@@ -56,12 +58,18 @@ end
 -- lookup as reagents; SKILL_RANK[id] is the skill rank the item asks for.
 ns.SKILL_RANK = {}
 for skill, list in pairs(ns.SKILL_ITEMS or {}) do
-    local set = ns.IS_REAGENT[skill] or {}
+    local set = ns.BASE_GROUP[skill] or {}
     for _, e in ipairs(list) do
         set[e[1]] = true
         ns.SKILL_RANK[e[1]] = e[2]
     end
-    ns.IS_REAGENT[skill] = set
+    ns.BASE_GROUP[skill] = set
+end
+ns.IS_REAGENT = {}
+for cat, set in pairs(ns.BASE_GROUP) do
+    local copy = {}
+    for id in pairs(set) do copy[id] = true end
+    ns.IS_REAGENT[cat] = copy
 end
 
 -- Order professions are shown in.
@@ -73,13 +81,18 @@ ns.CRAFT_ORDER = {
 
 -- What a button sends ("Send <what> (N)"); professions default to "<prof> mats".
 local WHAT = { Lockpicking = "lockboxes", Comprehension = "scrolls", Upgrades = "upgrades" }
+local function WhatOne(p)
+    if WHAT[p] then return WHAT[p] end
+    if ns.IsCustomGroup and ns.IsCustomGroup(p) then return p end
+    return p .. " mats"
+end
 function ns.What(prof)
     if type(prof) == "table" then -- a recipient's categories
         local parts = {}
-        for _, p in ipairs(prof) do parts[#parts + 1] = WHAT[p] or (p .. " mats") end
+        for _, p in ipairs(prof) do parts[#parts + 1] = WhatOne(p) end
         return #parts > 0 and table.concat(parts, ", ") or "nothing"
     end
-    return WHAT[prof] or (prof .. " mats")
+    return WhatOne(prof)
 end
 
 -- Skills that GetProfessions does not list, read by skill line ID instead.
@@ -146,6 +159,11 @@ local function InitDB()
     db.ignore = db.ignore or {}  -- [itemID] = true: never put in a draft
     if db.keepOwn == nil then db.keepOwn = true end
     db.targets = db.targets or {} -- [realm][name] = { cats = { "Tailoring", ... } }: friends, guildies, anyone
+    -- your changes to the item groups: edits[cat] = { add = {[id]=true}, remove = {[id]=true} },
+    -- custom[name] = {[id]=true}
+    db.groups = db.groups or {}
+    db.groups.edits = db.groups.edits or {}
+    db.groups.custom = db.groups.custom or {}
     ns.db = db
     ns.realm = GetRealmName()
     -- WoW Forever characters have a first name and a surname; UnitName gives
@@ -154,6 +172,7 @@ local function InitDB()
     local first, surname = UnitName("player")
     ns.me = (surname and surname ~= "") and (first .. " " .. surname) or first
     ns.surnames = ns.me ~= first
+    ns.RebuildGroups()
     ns.faction = UnitFactionGroup("player")
     db.chars[ns.realm] = db.chars[ns.realm] or {}
     db.targets[ns.realm] = db.targets[ns.realm] or {}
@@ -176,16 +195,140 @@ end
 -- the categories they want. One button sends all of them in one mail.
 ---------------------------------------------------------------------------
 -- Categories a recipient can want: every profession and skill, in panel order.
-function ns.Categories() return ns.CRAFT_ORDER end
+-- Built-in groups in panel order, then your custom groups by name.
+function ns.Categories()
+    local list = {}
+    for _, p in ipairs(ns.CRAFT_ORDER) do list[#list + 1] = p end
+    local custom = {}
+    for name in pairs(ns.db and ns.db.groups.custom or {}) do custom[#custom + 1] = name end
+    table.sort(custom)
+    for _, name in ipairs(custom) do list[#list + 1] = name end
+    return list
+end
+
+---------------------------------------------------------------------------
+-- Groups: the item lists behind every button, editable
+---------------------------------------------------------------------------
+function ns.IsCustomGroup(name)
+    return ns.db ~= nil and ns.db.groups.custom[name] ~= nil
+end
+
+function ns.RebuildGroups()
+    local g = ns.db.groups
+    ns.IS_REAGENT = {}
+    for cat, base in pairs(ns.BASE_GROUP) do
+        local e = g.edits[cat] or {}
+        local set = {}
+        for id in pairs(base) do
+            if not (e.remove and e.remove[id]) then set[id] = true end
+        end
+        for id in pairs(e.add or {}) do set[id] = true end
+        ns.IS_REAGENT[cat] = set
+    end
+    for name, items in pairs(g.custom) do
+        local set = {}
+        for id in pairs(items) do set[id] = true end
+        ns.IS_REAGENT[name] = set
+    end
+    if ns.Refresh then ns.Refresh() end
+end
+
+-- Item ids in a group, sorted by name (uncached items last, by id).
+function ns.GroupItems(cat)
+    local ids = {}
+    for id in pairs(ns.IS_REAGENT[cat] or {}) do ids[#ids + 1] = id end
+    local names = {}
+    for _, id in ipairs(ids) do names[id] = GetItemInfo(id) end
+    table.sort(ids, function(a, b)
+        local na, nb = names[a], names[b]
+        if na and nb and na ~= nb then return na < nb end
+        if (na ~= nil) ~= (nb ~= nil) then return na ~= nil end
+        return a < b
+    end)
+    return ids
+end
+
+-- Whether a built-in group differs from the data files.
+function ns.GroupEdited(cat)
+    local e = ns.db.groups.edits[cat]
+    return e ~= nil and (next(e.add or {}) ~= nil or next(e.remove or {}) ~= nil)
+end
+
+function ns.GroupAdd(cat, id)
+    if not (cat and id) then return false end
+    local g = ns.db.groups
+    if g.custom[cat] then
+        g.custom[cat][id] = true
+    elseif ns.BASE_GROUP[cat] then
+        local e = g.edits[cat] or { add = {}, remove = {} }
+        g.edits[cat] = e
+        e.remove[id] = nil
+        if not ns.BASE_GROUP[cat][id] then e.add[id] = true end
+    else
+        return false
+    end
+    ns.RebuildGroups()
+    return true
+end
+
+function ns.GroupRemove(cat, id)
+    local g = ns.db.groups
+    if g.custom[cat] then
+        g.custom[cat][id] = nil
+    elseif ns.BASE_GROUP[cat] then
+        local e = g.edits[cat] or { add = {}, remove = {} }
+        g.edits[cat] = e
+        e.add[id] = nil
+        if ns.BASE_GROUP[cat][id] then e.remove[id] = true end
+    else
+        return false
+    end
+    ns.RebuildGroups()
+    return true
+end
+
+-- Undo every edit to a built-in group.
+function ns.GroupReset(cat)
+    ns.db.groups.edits[cat] = nil
+    ns.RebuildGroups()
+end
+
+-- Creates an empty custom group; returns its name, or nil and why not.
+function ns.NewGroup(name)
+    name = strtrim(name or "")
+    if name == "" then return nil, "Enter a name for the group." end
+    for _, p in ipairs(ns.Categories()) do
+        if p:lower() == name:lower() then return nil, "There is already a group called " .. p .. "." end
+    end
+    ns.db.groups.custom[name] = {}
+    ns.RebuildGroups()
+    return name
+end
+
+-- Deletes a custom group and takes it off every recipient.
+function ns.DeleteGroup(name)
+    if not ns.IsCustomGroup(name) then return false end
+    ns.db.groups.custom[name] = nil
+    for _, t in pairs(ns.db.targets[ns.realm] or {}) do
+        for i = #t.cats, 1, -1 do
+            if t.cats[i] == name then table.remove(t.cats, i) end
+        end
+    end
+    for rname, t in pairs(ns.db.targets[ns.realm] or {}) do
+        if #t.cats == 0 then ns.db.targets[ns.realm][rname] = nil end
+    end
+    ns.RebuildGroups()
+    return true
+end
 
 -- Category from user input: "tailoring", "Tailoring mats", "scrolls", ...
 function ns.FindCategory(text)
     text = strtrim(text or ""):lower()
     if text == "" then return nil end
-    for _, p in ipairs(ns.CRAFT_ORDER) do
+    for _, p in ipairs(ns.Categories()) do
         if p:lower() == text or ns.What(p):lower() == text then return p end
     end
-    for _, p in ipairs(ns.CRAFT_ORDER) do -- unique prefix: "tail", "lock"
+    for _, p in ipairs(ns.Categories()) do -- unique prefix: "tail", "lock"
         if p:lower():sub(1, #text) == text then return p end
     end
 end
@@ -202,7 +345,7 @@ function ns.SetTarget(name, cats)
     if not name then return nil end
     local want, list = {}, {}
     for _, p in ipairs(cats or {}) do want[p] = true end
-    for _, p in ipairs(ns.CRAFT_ORDER) do -- keep panel order
+    for _, p in ipairs(ns.Categories()) do -- keep panel order
         if want[p] then list[#list + 1] = p end
     end
     local targets = ns.db.targets[ns.realm]
@@ -457,6 +600,7 @@ ev:SetScript("OnEvent", function(_, event)
         C_Timer.After(15, function() ns.ScanSkills(true) end)
         if ns.InitGear then ns.InitGear() end
         if ns.InitSocial then ns.InitSocial() end
+        if ns.InitMinimap then ns.InitMinimap() end
         if ns.InitUI then ns.InitUI() end
     elseif ns.db then
         ns.ScanSkills(false)
@@ -528,6 +672,13 @@ SlashCmdList.RONISMAILMATS = function(msg)
         local list = ns.Targets()
         if #list == 0 then ns.Print("No other recipients. Add one: /mailmats target <name> tailoring, scrolls") end
         for _, name in ipairs(list) do ns.Print(("  %s: %s"):format(name, ns.What(ns.TargetCats(name)))) end
+    elseif cmd == "groups" or cmd == "group" then
+        local cat = arg ~= "" and ns.FindCategory(arg) or nil
+        if arg ~= "" and not cat then return ns.Print("No group called '" .. arg .. "'.") end
+        ns.ToggleGroups(cat)
+    elseif cmd == "minimap" then
+        ns.SetMinimapShown(ns.db.hideMinimap and true or false)
+        ns.Print(ns.db.hideMinimap and "Minimap button hidden. /mailmats minimap shows it again." or "Minimap button shown.")
     elseif cmd == "scan" then
         ns.ScanSkills(true)
         ns.Print(ns.me .. ": " .. ProfString(ns.MyChar()))
@@ -552,6 +703,7 @@ SlashCmdList.RONISMAILMATS = function(msg)
         end
         ns.Print("/mailmats scan | selftest | forget <name> | ignore <item> | unignore <item> | ignored")
         ns.Print("/mailmats target <first last>: <category>, ... | untarget <first last> | targets")
+        ns.Print("/mailmats groups [group] | minimap")
     end
 end
 

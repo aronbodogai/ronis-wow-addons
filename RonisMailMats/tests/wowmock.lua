@@ -204,6 +204,10 @@ function mock.NewSession(opts)
     function FrameMethods:SetClampedToScreen() end
     function FrameMethods:SetFrameStrata() end
     function FrameMethods:SetFrameLevel() end
+    function FrameMethods:StartMoving() end
+    function FrameMethods:StopMovingOrSizing() end
+    function FrameMethods:GetCenter() return 100, 100 end
+    function FrameMethods:GetEffectiveScale() return 1 end
     function FrameMethods:GetFrameLevel() return 1 end
     function FrameMethods:CreateFontString(name)
         local fs = setmetatable({ _type = "FontString", _shown = true, _points = {}, _parent = self,
@@ -291,12 +295,17 @@ function mock.NewSession(opts)
 
     env.UIParent = env.CreateFrame("Frame", "UIParent")
 
+    env.Minimap = env.CreateFrame("Frame", "Minimap", env.UIParent)
+    env.UISpecialFrames = {}
+    env.GetCursorPosition = function() return 0, 0 end
+
     env.GameTooltip = env.CreateFrame("Frame", "GameTooltip", env.UIParent)
     env.GameTooltip:Hide()
     env.GameTooltip._kindMethods.SetOwner = function(self, owner) self._owner = owner; self._lines = {} end
     env.GameTooltip._kindMethods.GetItem = function(self)
         if self._item then return env.C_Item.GetItemInfo(self._item) end
     end
+    env.GameTooltip._kindMethods.SetItemByID = function(self, id) self._item = id end
     env.GameTooltip._kindMethods.ClearLines = function(self) self._lines = {} end
     env.GameTooltip._kindMethods.AddLine = function(self, t) table.insert(self._lines, t) end
     env.GameTooltip._kindMethods.AddDoubleLine = function(self, a, b) table.insert(self._lines, a .. " | " .. b) end
@@ -481,6 +490,9 @@ function mock.NewSession(opts)
         end,
     }
     env.CursorHasItem = function() return S.cursor ~= nil end
+    env.GetCursorInfo = function()
+        if S.cursor then return "item", S.cursor.item.id end
+    end
     env.ClearCursor = function()
         if S.cursor then S.cursor.item.locked = false; S.cursor = nil end
     end
