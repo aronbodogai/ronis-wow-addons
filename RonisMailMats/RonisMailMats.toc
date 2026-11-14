@@ -2,13 +2,14 @@
 ## Title: |cffff8c1aRoni's|r MailMats
 ## Notes: Remembers your alts' professions and drafts mails with the reagents they can use.
 ## Author: Roni
-## Version: 0.7.2
+## Version: 0.8.0
 ## OptionalDeps: Bagnon
 ## SavedVariables: RonisMailMatsDB
 ## IconTexture: Interface\Icons\INV_Letter_15
 
 Data\Reagents.lua
 Data\SkillItems.lua
+Data\Messages.lua
 Core.lua
 Gear.lua
 Social.lua

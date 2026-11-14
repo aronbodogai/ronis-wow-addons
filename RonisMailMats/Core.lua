@@ -611,6 +611,49 @@ end
 ---------------------------------------------------------------------------
 local MAX_ATTACH = ATTACHMENTS_MAX_SEND or 12
 
+---------------------------------------------------------------------------
+-- Mail body: a random message (Data/Messages.lua) with {name} and {what}
+-- filled in. Never replaces text you typed yourself.
+---------------------------------------------------------------------------
+-- The body box: SendMailBodyEditBox on Classic-style mail frames, the
+-- scrolling MailEditBox on modern ones.
+local function BodyBox()
+    if SendMailBodyEditBox then return SendMailBodyEditBox end
+    if MailEditBox then return (MailEditBox.GetEditBox and MailEditBox:GetEditBox()) or MailEditBox end
+end
+ns.BodyBox = BodyBox
+
+local lastIndex
+
+-- A random message, never the one shown last. Returns the text and its index.
+function ns.RandomMessage(name, what)
+    local list = ns.MESSAGES or {}
+    if #list == 0 then return nil end
+    local i = math.random(#list)
+    if #list > 1 and i == lastIndex then i = (i % #list) + 1 end
+    lastIndex = i
+    local first = (name or ""):match("^(%S+)") or name or "friend"
+    local text = list[i]:gsub("{name}", first):gsub("{what}", what or "mats")
+    return text, i
+end
+
+-- Puts a random message in the body. `force` (the New message button) also
+-- replaces our own earlier message; text you typed is always left alone.
+function ns.FillMessage(force)
+    if ns.db and ns.db.noMessage and not force then return end
+    local box = BodyBox()
+    if not box then return end
+    local current = box:GetText() or ""
+    if current ~= "" and current ~= ns.lastBody then return false end
+    local d = ns.lastDraft or {}
+    local name = d.name or (SendMailNameEditBox and SendMailNameEditBox:GetText()) or ""
+    local text = ns.RandomMessage(name, d.what)
+    if not text then return false end
+    box:SetText(text)
+    ns.lastBody = text
+    return true
+end
+
 -- Next empty attachment slot. `used` tracks slots filled this pass, since
 -- HasSendMailItem may lag behind until the attachment is confirmed.
 local function FreeSlot(used)
@@ -647,6 +690,8 @@ local function Attach(name, prof)
     if SendMailNameEditBox then SendMailNameEditBox:SetText(name) end
     local what = ns.What(prof)
     if SendMailSubjectEditBox then SendMailSubjectEditBox:SetText((what:gsub("^%l", string.upper))) end
+    ns.lastDraft = { name = name, what = what }
+    ns.FillMessage(false)
     local left = #stacks - attached - skipped
     if left > 0 then
         ns.Print(("Drafted %d stacks of %s for %s. %d more stack(s) left - press the button again after sending.")
@@ -772,6 +817,14 @@ SlashCmdList.RONISMAILMATS = function(msg)
         local cat = arg ~= "" and ns.FindCategory(arg) or nil
         if arg ~= "" and not cat then return ns.Print("No group called '" .. arg .. "'.") end
         ns.ToggleGroups(cat)
+    elseif cmd == "message" or cmd == "messages" then
+        if arg == "off" then
+            ns.db.noMessage = true
+        elseif arg == "on" then
+            ns.db.noMessage = nil
+        end
+        ns.Print(ns.db.noMessage and "Drafts get no message. /mailmats message on turns it back on."
+            or ("Drafts get a random message (%d to pick from). /mailmats message off turns it off."):format(#(ns.MESSAGES or {})))
     elseif cmd == "minimap" then
         ns.SetMinimapShown(ns.db.hideMinimap and true or false)
         ns.Print(ns.db.hideMinimap and "Minimap button hidden. /mailmats minimap shows it again." or "Minimap button shown.")
@@ -842,6 +895,8 @@ function ns.SelfTest()
     for p, info in pairs(profs or {}) do parts[#parts + 1] = p .. " " .. tostring(info.rank) end
     table.sort(parts)
     ns.Print(("Profession API: %s -> %s"):format(api, #parts > 0 and table.concat(parts, ", ") or "nothing"))
+    ns.Print("Mail body box: " .. ((SendMailBodyEditBox and "SendMailBodyEditBox") or (MailEditBox and "MailEditBox")
+        or "|cffff4040not found|r (random messages are off)"))
     -- raw skill line data for Lockpicking / Comprehension, to check field names
     local SI = C_SkillInfo
     for id, key in pairs(ns.EXTRA_SKILLS) do

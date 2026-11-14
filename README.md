@@ -104,6 +104,15 @@ Mails reagents to the alt who can use them.
   group of your own (blue), which you can give to recipients like any
   other; **Delete group** removes it and takes it off every recipient.
   Drag the minimap button to move it; `/mailmats minimap` hides or shows it.
+- **Random messages:** every draft gets one of 100 messages in the mail
+  body, in 20 tones (pirate, grumpy dwarf, secret agent, cozy grandma,
+  corporate memo...), with the recipient's first name and what is sent
+  filled in. **New message** on the panel rolls another one. Text you typed
+  yourself is never replaced. `/mailmats message off` stops it. The
+  messages were written by four Claude models (Haiku, Sonnet, Opus, Fable),
+  25 each, and live in `tools/messages/*.json`; regenerate with
+  `node RonisMailMats/tools/gen_messages.js > RonisMailMats/Data/Messages.lua`,
+  which also checks length, characters and placeholders.
 - Windows have a solid background. Like the world map, the mailbox panel
   and the Groups window fade while you move (unless the mouse is over
   them) and turn solid again when you stop.

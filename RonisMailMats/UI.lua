@@ -6,7 +6,7 @@ local PAD = 10
 local GetItemInfo = GetItemInfo or (C_Item and C_Item.GetItemInfo)
 local GetItemIcon = GetItemIcon or (C_Item and C_Item.GetItemIconByID)
 
-local panel, title, keepBox, emptyText, addButton, editor, keepText, keepChoose, keepFrame
+local panel, title, keepBox, emptyText, addButton, msgButton, editor, keepText, keepChoose, keepFrame
 local headers, buttons, removers = {}, {}, {}
 
 local function ClassColor(class)
@@ -196,6 +196,9 @@ function ns.Refresh()
 
     addButton:SetPoint("TOPLEFT", PAD, y)
     y = y - 26
+    msgButton:SetPoint("TOPLEFT", PAD, y)
+    msgButton:SetEnabled(ns.BodyBox() ~= nil and #(ns.MESSAGES or {}) > 0)
+    y = y - 26
 
     keepBox:SetPoint("TOPLEFT", PAD - 4, y)
     keepBox:SetChecked(ns.db.keepOwn)
@@ -262,6 +265,25 @@ function ns.InitUI()
     addButton:SetSize(WIDTH - 2 * PAD, 22)
     addButton:SetText("Add a recipient...")
     addButton:SetScript("OnClick", function() ns.OpenEditor(nil) end)
+
+    -- another random message in the mail body
+    msgButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    msgButton:SetSize(WIDTH - 2 * PAD, 22)
+    msgButton:SetText("New message")
+    msgButton:SetScript("OnClick", function()
+        if not (SendMailFrame and SendMailFrame:IsShown()) and MailFrameTab2 then MailFrameTab2:Click() end
+        if ns.FillMessage(true) == false then
+            ns.Print("The mail body has your own text; clear it first to get a random message.")
+        end
+    end)
+    msgButton:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine("New message")
+        GameTooltip:AddLine(("Puts another of %d random messages in the mail body. Text you typed yourself is never replaced.")
+            :format(#(ns.MESSAGES or {})), 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    msgButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     panel:SetScript("OnShow", ns.Refresh)
 

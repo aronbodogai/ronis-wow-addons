@@ -34,6 +34,22 @@ function checkReagents() {
   } else {
     console.log("ok   Data/Reagents.lua matches the recipe database");
   }
+  // messages: the generator validates every one (length, characters, placeholders)
+  let msgs;
+  try {
+    msgs = execFileSync(process.execPath, [path.join(ADDON_DIR, "tools", "gen_messages.js")], { encoding: "utf8" });
+  } catch (e) {
+    console.log("FAIL message check:\n     " + String(e.stderr || e.message).trim().replace(/\n/g, "\n     "));
+    failed++;
+    return;
+  }
+  const haveMsgs = fs.readFileSync(path.join(ADDON_DIR, "Data", "Messages.lua"), "utf8").replace(/\r\n/g, "\n");
+  if (msgs !== haveMsgs) {
+    console.log("FAIL Data/Messages.lua is stale: run node RonisMailMats/tools/gen_messages.js > RonisMailMats/Data/Messages.lua");
+    failed++;
+  } else {
+    console.log("ok   Data/Messages.lua is valid and matches tools/messages");
+  }
 }
 
 // --- 2. Forever API lists ---------------------------------------------------

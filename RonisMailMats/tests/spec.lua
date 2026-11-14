@@ -766,4 +766,60 @@ return function(T)
         local panel = T.Panel(S)
         ok(panel._scripts.OnUpdate, "mailbox panel fades too")
     end)
+
+    -----------------------------------------------------------------------
+    -- Random mail messages
+    -----------------------------------------------------------------------
+    local function Body(S) return S.env.SendMailBodyEditBox:GetText() end
+    local function MsgButton(S)
+        for _, f in ipairs(S.frames) do
+            if f._parent == T.Panel(S) and f._text == "New message" then return f end
+        end
+    end
+
+    test("drafts get a random message with the name and what filled in", function()
+        local S = MainAtMailbox(nil, { bags = Bags(LOCKBOX_BAGS) })
+        eq(#S.ns.MESSAGES, 100, "100 messages")
+        S.Slash("/mailmats", "target Bob Smith: tailoring, scrolls")
+        T.Button(S, "Send all to Bob Smith"):Click()
+        S.Advance(1)
+        local body = Body(S)
+        ok(body ~= "", "body filled")
+        ok(not body:find("[{}]"), "placeholders replaced: " .. body)
+        ok(not body:find("Smith"), "first name only: " .. body)
+    end)
+
+    test("New message rotates to a different one and never replaces typed text", function()
+        local S = MainAtMailbox(TailorAltSaved())
+        T.Button(S, "Tailoring"):Click()
+        S.Advance(1)
+        local seen, last = {}, Body(S)
+        seen[last] = true
+        for _ = 1, 30 do
+            MsgButton(S):Click()
+            local now = Body(S)
+            ok(now ~= last, "a different message each click")
+            seen[now], last = true, now
+        end
+        local n = 0
+        for _ in pairs(seen) do n = n + 1 end
+        ok(n > 10, "many different messages: " .. n)
+        S.env.SendMailBodyEditBox:SetText("my own words")
+        MsgButton(S):Click()
+        eq(Body(S), "my own words", "typed text kept")
+        contains(S.printLog, "has your own text", "explained")
+        T.Button(S, "Tailoring"):Click()
+        S.Advance(1)
+        eq(Body(S), "my own words", "drafting again keeps it too")
+    end)
+
+    test("/mailmats message off leaves the body empty", function()
+        local S = MainAtMailbox(TailorAltSaved())
+        S.Slash("/mailmats", "message off")
+        T.Button(S, "Tailoring"):Click()
+        S.Advance(1)
+        eq(Body(S), "", "no message")
+        MsgButton(S):Click()
+        ok(Body(S) ~= "", "the button still works")
+    end)
 end
