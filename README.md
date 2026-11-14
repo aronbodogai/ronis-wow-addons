@@ -63,6 +63,17 @@ Mails reagents to the alt who can use them.
   junkboxes, locked chests), mage alts with **Comprehension** a **Send
   scrolls** button (the Forever mage scrolls). The tooltip marks items above
   the alt's current skill with "(needs N)"; they are still sent.
+- **Gear upgrades:** every character also records the item level it wears
+  in each slot. Gear in your bags that an alt can wear now (level, its
+  class's best armor type, a weapon type the class can learn, no off-hand
+  while it wields a two-hander) and that has a higher item level than what
+  the alt wears there:
+  - gets a mail icon on its bag slot (Bagnon and the default bags),
+  - shows "Upgrade for <alt> (+N item level)" in its tooltip,
+  - is drafted by the alt's **Send upgrades (N)** button, which only appears
+    when there is something to send.
+  Bind-on-pickup and soulbound items are never counted. Item level is the
+  only measure; stats are not compared.
 
 "Mats" for a profession are all items used as a reagent by any of its
 recipes (`Data/Reagents.lua`, generated from RonisItemPedia's recipe database

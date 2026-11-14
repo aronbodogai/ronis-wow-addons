@@ -16,6 +16,8 @@
 --   bags     = { [0] = { [slot] = { id = 2589, count = 20, bound = false } } },
 --   saved    = { RonisMailMatsDB = ... },   -- from a previous session
 --   mailLag  = true: HasSendMailItem only updates on the next timer tick
+--   equipped = { [inventory slot] = itemID }
+--   bagnon   = true: a minimal Bagnon (Bagnon.Item with UpdateUpgradeIcon)
 -- }
 local mock = {}
 
@@ -30,6 +32,16 @@ local ITEMS = {
     [4632] = { "Ornate Bronze Lockbox", 2 }, [16882] = { "Battered Junkbox", 1 },
     [4636] = { "Strong Iron Lockbox", 2 },
     [211780] = { "Scroll: KWYJIBO", 1 }, [213543] = { "Scroll: UPDOG", 1 },
+    -- gear: { name, quality, ilvl, minLevel, equipLoc, classID, subclassID, bindType }
+    [9001] = { "Cloth Hood", 2, 20, 15, "INVTYPE_HEAD", 4, 1, 2 },
+    [9002] = { "Old Cloth Hood", 1, 10, 5, "INVTYPE_HEAD", 4, 1, 2 },
+    [9003] = { "Leather Cap", 2, 25, 15, "INVTYPE_HEAD", 4, 2, 2 },
+    [9004] = { "High Level Hood", 3, 60, 55, "INVTYPE_HEAD", 4, 1, 2 },
+    [9005] = { "Bound Hood", 3, 30, 15, "INVTYPE_HEAD", 4, 1, 1 },
+    [9006] = { "Fine Ring", 2, 22, 10, "INVTYPE_FINGER", 4, 0, 2 },
+    [9007] = { "Iron Shield", 2, 22, 10, "INVTYPE_SHIELD", 4, 6, 2 },
+    [9008] = { "Oak Staff", 2, 22, 10, "INVTYPE_2HWEAPON", 2, 10, 2 },
+    [9009] = { "Spellbook", 2, 25, 10, "INVTYPE_HOLDABLE", 4, 0, 2 },
 }
 
 -- Lua builtins visible to addon code (WoW runs Lua 5.1 plus a few helpers).
@@ -117,6 +129,7 @@ function mock.NewSession(opts)
         local m = Region[k]
         if m then return m end
         if type(k) == "string" and k:sub(1, 1) == "_" then return nil end -- unset mock field
+        if type(k) == "string" and k:find("^RonisMailMats") then return nil end -- addon's own field
         local kindMethods = rawget(self, "_kindMethods")
         if kindMethods and kindMethods[k] then return kindMethods[k] end
         error(("mock: %s has no method %s"):format(self._type, tostring(k)), 2)
@@ -275,6 +288,9 @@ function mock.NewSession(opts)
     env.GameTooltip = env.CreateFrame("Frame", "GameTooltip", env.UIParent)
     env.GameTooltip:Hide()
     env.GameTooltip._kindMethods.SetOwner = function(self, owner) self._owner = owner; self._lines = {} end
+    env.GameTooltip._kindMethods.GetItem = function(self)
+        if self._item then return env.C_Item.GetItemInfo(self._item) end
+    end
     env.GameTooltip._kindMethods.ClearLines = function(self) self._lines = {} end
     env.GameTooltip._kindMethods.AddLine = function(self, t) table.insert(self._lines, t) end
     env.GameTooltip._kindMethods.AddDoubleLine = function(self, a, b) table.insert(self._lines, a .. " | " .. b) end
@@ -312,13 +328,45 @@ function mock.NewSession(opts)
         local id = type(ref) == "number" and ref or tonumber(tostring(ref):match("item:(%d+)") or ref)
         local it = id and ITEMS[id]
         if not it then return nil end
-        return it[1], ItemLink(id), it[2], 10, 1, "Trade Goods", "Cloth", 200, "", 134400, 10
+        if it[5] then
+            return it[1], ItemLink(id), it[2], it[3], it[4], "Armor", "Misc", 1, it[5], 134400, 10, it[6], it[7], it[8]
+        end
+        return it[1], ItemLink(id), it[2], 10, 1, "Trade Goods", "Cloth", 200, "", 134400, 10, 7, 5, 0
     end
     env.C_Item = {
         GetItemInfo = GetItemInfo,
         GetItemIconByID = function(id) return ITEMS[id] and 134400 or nil end,
         IsBound = function() return false end,
+        GetDetailedItemLevelInfo = function(ref)
+            local _, _, _, ilvl = GetItemInfo(ref)
+            return ilvl
+        end,
     }
+    local equipped = opts.equipped or {}
+    env.GetInventoryItemLink = function(unit, slot)
+        if unit == "player" and equipped[slot] then return ItemLink(equipped[slot]) end
+    end
+    env.hooksecurefunc = function(t, name, fn)
+        if type(t) == "string" then t, name, fn = env, t, name end
+        local old = t[name]
+        t[name] = function(...) local r = { old(...) }; fn(...); return table.unpack(r) end
+    end
+    -- Item tooltips: FrameXML's TooltipDataProcessor post calls.
+    env.Enum = { TooltipDataType = { Item = 0 } }
+    local postCalls = {}
+    env.TooltipDataProcessor = {
+        AddTooltipPostCall = function(kind, fn) postCalls[#postCalls + 1] = { kind, fn } end,
+    }
+    function S.ShowItemTooltip(id)
+        local tt = env.GameTooltip
+        tt:SetOwner(env.UIParent)
+        tt._item = id
+        for _, p in ipairs(postCalls) do if p[1] == env.Enum.TooltipDataType.Item then p[2](tt) end end
+        return tt._lines
+    end
+    if opts.bagnon then
+        env.Bagnon = { Item = { UpdateUpgradeIcon = function(self) end } }
+    end
     -- No global GetItemInfo / GetItemIcon: the Forever client only has the
     -- C_Item versions (the API check enforces this).
 
@@ -399,6 +447,10 @@ function mock.NewSession(opts)
         GetContainerItemID = function(bag, slot)
             local s = Slot(bag, slot)
             return s and s.id or nil
+        end,
+        GetContainerItemLink = function(bag, slot)
+            local s = Slot(bag, slot)
+            return s and ItemLink(s.id) or nil
         end,
         GetContainerItemInfo = function(bag, slot)
             local s = Slot(bag, slot)

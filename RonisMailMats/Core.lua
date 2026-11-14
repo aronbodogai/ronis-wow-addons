@@ -72,7 +72,7 @@ ns.CRAFT_ORDER = {
 }
 
 -- What a button sends ("Send <what> (N)"); professions default to "<prof> mats".
-local WHAT = { Lockpicking = "lockboxes", Comprehension = "scrolls" }
+local WHAT = { Lockpicking = "lockboxes", Comprehension = "scrolls", Upgrades = "upgrades" }
 function ns.What(prof)
     return WHAT[prof] or (prof .. " mats")
 end
@@ -228,6 +228,7 @@ function ns.ScanSkills(final)
         faction = ns.faction,
         level = UnitLevel("player"),
         profs = profs or (old and old.profs) or {},
+        gear = old and old.gear, -- Gear.lua
         seen = time(),
     }
     if ns.Refresh then ns.Refresh() end
@@ -252,14 +253,22 @@ end
 
 -- Returns { {bag, slot, id, count}, ... } of mailable stacks for prof,
 -- plus a total-by-item table { [id] = count } in first-seen order (ids list).
-function ns.StacksFor(prof)
+-- prof "Upgrades" means gear that is an upgrade for `alt` (Gear.lua).
+function ns.StacksFor(prof, alt)
+    local upgrades = prof == "Upgrades"
     local set = ns.IS_REAGENT[prof]
     local stacks, totals, ids = {}, {}, {}
-    if not set then return stacks, totals, ids end
+    if not set and not upgrades then return stacks, totals, ids end
     for bag = 0, (NUM_BAG_SLOTS or 4) do
         for slot = 1, (GetContainerNumSlots(bag) or 0) do
             local id = GetContainerItemID(bag, slot)
-            if id and set[id] and not ns.HoldReason(id) then
+            local wanted
+            if upgrades then
+                wanted = id and not ns.db.ignore[id] and ns.IsUpgradeIn(bag, slot, alt)
+            else
+                wanted = id and set[id] and not ns.HoldReason(id)
+            end
+            if wanted then
                 local count, _, bound = SlotInfo(bag, slot)
                 if not bound then
                     stacks[#stacks + 1] = { bag = bag, slot = slot, id = id, count = count or 1 }
@@ -287,7 +296,7 @@ local function FreeSlot(used)
 end
 
 local function Attach(name, prof)
-    local stacks = ns.StacksFor(prof)
+    local stacks = ns.StacksFor(prof, name)
     local attached, skipped = 0, 0
     local used = {}
     ClearCursor()
@@ -361,6 +370,7 @@ ev:SetScript("OnEvent", function(_, event)
         -- trust an empty answer only once things have settled
         C_Timer.After(3, function() ns.ScanSkills(false) end)
         C_Timer.After(15, function() ns.ScanSkills(true) end)
+        if ns.InitGear then ns.InitGear() end
         if ns.InitUI then ns.InitUI() end
     elseif ns.db then
         ns.ScanSkills(false)

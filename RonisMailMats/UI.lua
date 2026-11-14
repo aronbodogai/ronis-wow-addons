@@ -33,7 +33,7 @@ local function ButtonTooltip(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     local what = ns.What(self.prof)
     GameTooltip:AddLine(("%s for %s"):format(what:gsub("^%l", string.upper), self.alt))
-    local stacks, totals, ids = ns.StacksFor(self.prof)
+    local stacks, totals, ids = ns.StacksFor(self.prof, self.alt)
     local alt = ns.db.chars[ns.realm][self.alt]
     local skill = alt and alt.profs and alt.profs[self.prof]
     local myRank = skill and skill.rank or 0
@@ -91,6 +91,8 @@ function ns.Refresh()
         for _, p in ipairs(ns.CRAFT_ORDER) do
             if c.profs and c.profs[p] then crafts[#crafts + 1] = p end
         end
+        -- gear upgrades: only when there are some, so the panel stays short
+        if #ns.StacksFor(ns.UPGRADES, alt) > 0 then crafts[#crafts + 1] = ns.UPGRADES end
         if #crafts > 0 then
             nh = nh + 1
             local h = GetHeader(nh)
@@ -101,7 +103,7 @@ function ns.Refresh()
                 nb = nb + 1
                 local b = GetButton(nb)
                 b.alt, b.prof = alt, p
-                local stacks = ns.StacksFor(p)
+                local stacks = ns.StacksFor(p, alt)
                 b:SetText(("Send %s (%d)"):format(ns.What(p), #stacks))
                 b:SetEnabled(#stacks > 0)
                 b:SetPoint("TOPLEFT", PAD + 8, y)

@@ -93,7 +93,11 @@ local FALLBACKS = {
     GetNumSkillLines = true, GetSkillLineInfo = true, ExpandSkillHeader = true,
     GetContainerNumSlots = true, GetContainerItemID = true, GetContainerItemInfo = true,
     PickupContainerItem = true, GetItemIcon = true, GetItemInfo = true, ItemLocation = true,
+    GetContainerItemLink = true,
+    -- FrameXML tables and other addons, all read behind a nil check
+    ItemRefTooltip = true, Bagnon = true,
 }
+for i = 1, 13 do FALLBACKS["ContainerFrame" .. i] = true end
 if FOREVER_API then
     local bad = {}
     local seenMock, missingReads = {}, {}

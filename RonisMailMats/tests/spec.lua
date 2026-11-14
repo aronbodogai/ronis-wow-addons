@@ -310,4 +310,84 @@ return function(T)
         contains(S.printLog, "Comprehension %(3012%): not known", "unknown skill")
         contains(S.printLog, "Self test passed", "selftest")
     end)
+
+    -----------------------------------------------------------------------
+    -- Gear upgrades for alts
+    -----------------------------------------------------------------------
+    -- bag 0: 1 Cloth Hood, 2 Leather Cap, 3 High Level Hood, 4 Bound Hood (BoP),
+    -- 5 Fine Ring, 6 Iron Shield, 7 Spellbook, 8 soulbound Cloth Hood, 9 cloth
+    local GEAR_BAGS = { { 9001, 1 }, { 9003, 1 }, { 9004, 1 }, { 9005, 1 }, { 9006, 1 },
+                        { 9007, 1 }, { 9009, 1 }, { 9001, 1, true }, { 2589, 5 } }
+
+    local function GearAltsSaved()
+        local saved = T.Logout(T.Login({ name = "Wiz", class = "MAGE", level = 20,
+            equipped = { [1] = 9002 } }))
+        return T.Logout(T.Login({ name = "Tank", class = "WARRIOR", level = 20,
+            equipped = { [16] = 9008 } }, saved))
+    end
+
+    local function TooltipText(S, id)
+        return table.concat(S.ShowItemTooltip(id), " / ")
+    end
+
+    test("login records the item level worn in each slot", function()
+        local saved = GearAltsSaved()
+        local g = Char(saved, "Wiz").gear
+        eq(g[1], 10, "head")
+        eq(g[11], 0, "empty ring slot")
+        ok(Char(saved, "Tank").gear.twoHand, "two-hander noted")
+    end)
+
+    test("tooltip says which alt an item upgrades and by how much", function()
+        local S = MainAtMailbox(GearAltsSaved(), { bags = Bags(GEAR_BAGS) })
+        contains(S.ShowItemTooltip(9001), "Upgrade for Wiz %(%+10 item level%)", "cloth hood")
+        local ring = TooltipText(S, 9006)
+        ok(ring:find("Upgrade for Wiz") and ring:find("Upgrade for Tank"), "ring for both: " .. ring)
+    end)
+
+    test("no upgrade line for gear the alt cannot use or receive", function()
+        local S = MainAtMailbox(GearAltsSaved(), { bags = Bags(GEAR_BAGS) })
+        for id, why in pairs({ [9003] = "leather on a mage, mail-wearer warrior",
+                               [9004] = "level too high", [9005] = "bind on pickup",
+                               [9007] = "shield: mage cannot, warrior wields a two-hander" }) do
+            ok(not TooltipText(S, id):find("Upgrade for"), why)
+        end
+    end)
+
+    test("mailbox panel offers the alt's upgrades and drafts them", function()
+        local S = MainAtMailbox(GearAltsSaved(), { bags = Bags(GEAR_BAGS) })
+        local b, tank
+        for _, x in ipairs(T.Buttons(S)) do
+            if (x._text or ""):find("upgrades") then
+                if x.alt == "Wiz" then b = x elseif x.alt == "Tank" then tank = x end
+            end
+        end
+        ok(b, "Wiz has an upgrades button")
+        eq(b:GetText(), "Send upgrades (3)", "hood, ring, spellbook; not the soulbound hood")
+        eq(tank and tank:GetText(), "Send upgrades (1)", "the ring for Tank")
+        b:Click()
+        S.Advance(1)
+        local ids = {}
+        for _, a in ipairs(S.Attachments()) do ids[#ids + 1] = a.id end
+        table.sort(ids)
+        eq(table.concat(ids, ","), "9001,9006,9009", "attached")
+        eq(S.env.SendMailSubjectEditBox:GetText(), "Upgrades", "subject")
+        eq(#S.sent, 0, "nothing sent")
+    end)
+
+    test("Bagnon item buttons get the mail icon on upgrades", function()
+        local S = MainAtMailbox(GearAltsSaved(), { bags = Bags(GEAR_BAGS), bagnon = true })
+        local function BagnonButton(slot)
+            local f = S.env.CreateFrame("Button")
+            f.GetBag = function() return 0 end
+            f.GetID = function() return slot end
+            f.info = { hyperlink = S.env.C_Container.GetContainerItemLink(0, slot) }
+            S.env.Bagnon.Item.UpdateUpgradeIcon(f)
+            return f
+        end
+        local hood, cap, bound = BagnonButton(1), BagnonButton(2), BagnonButton(8)
+        ok(hood.RonisMailMatsIcon and hood.RonisMailMatsIcon:IsShown(), "icon on the hood")
+        ok(not (cap.RonisMailMatsIcon and cap.RonisMailMatsIcon:IsShown()), "no icon on the leather cap")
+        ok(not (bound.RonisMailMatsIcon and bound.RonisMailMatsIcon:IsShown()), "no icon on a soulbound item")
+    end)
 end
