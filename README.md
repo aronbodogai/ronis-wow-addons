@@ -59,6 +59,10 @@ Mails reagents to the alt who can use them.
 - Hover a button to see which items and how many would be attached.
 - **Keep mats for my own professions** (on by default) never drafts items
   the current character can use for its own professions.
+- Rogue alts with **Lockpicking** get a **Send lockboxes** button (lockboxes,
+  junkboxes, locked chests), mage alts with **Comprehension** a **Send
+  scrolls** button (the Forever mage scrolls). The tooltip marks items above
+  the alt's current skill with "(needs N)"; they are still sent.
 
 "Mats" for a profession are all items used as a reagent by any of its
 recipes (`Data/Reagents.lua`, generated from RonisItemPedia's recipe database
@@ -72,7 +76,10 @@ shows what it reads.
 
 Professions are read with `GetProfessions` / `GetProfessionInfo` (the
 Forever client has no Classic `GetSkillLineInfo`), keyed by skill line ID so
-the client language does not matter.
+the client language does not matter. Lockpicking (633) and Comprehension
+(3012) are not professions; they are read with
+`C_SkillInfo.GetSkillLineInfoByID`. `/mailmats selftest` prints that call's
+raw fields for both.
 
 Tests: `cd RonisMailMats/tests && npm install && npm test`. The addon runs
 in a Lua VM (fengari) against a mocked client (`wowmock.lua`); the mock may
@@ -84,6 +91,12 @@ GitHub Actions (`.github/workflows/test-mailmats.yml`).
 Regenerating after the recipe database changes:
 
     node RonisMailMats/tools/gen_reagents.js > RonisMailMats/Data/Reagents.lua
+
+Lockboxes and scrolls (`Data/SkillItems.lua`) come from the client's
+ItemSparse and Lock tables:
+
+    # download ItemSparse and Lock CSVs from https://wago.tools/db2/<Table>/csv?build=<build>, then:
+    node RonisMailMats/tools/gen_skill_items.js <csv-folder> <build> > RonisMailMats/Data/SkillItems.lua
 
 ## Releasing
 

@@ -234,4 +234,80 @@ return function(T)
         contains(S.printLog, "Self test passed", "selftest")
         contains(S.printLog, "GetProfessions %-> Cooking 75, Tailoring 150", "profession line")
     end)
+
+    -----------------------------------------------------------------------
+    -- Lockpicking and Comprehension (skills, not professions)
+    -----------------------------------------------------------------------
+    local LOCKBOX_BAGS = { { 4632, 1 }, { 16882, 1 }, { 4636, 1 }, { 211780, 1 }, { 213543, 2 }, { 2589, 20 } }
+
+    local function RogueAndMageSaved()
+        local saved = T.Logout(T.Login({ name = "Sneaky", class = "ROGUE",
+            skills = { { id = 633, name = "Lockpicking", rank = 80, max = 100 } } }))
+        return T.Logout(T.Login({ name = "Wizard", class = "MAGE",
+            skills = { { id = 3012, name = "Comprehension", rank = 20, max = 75 } } }, saved))
+    end
+
+    test("Lockpicking and Comprehension are read from C_SkillInfo", function()
+        local saved = RogueAndMageSaved()
+        eq(Char(saved, "Sneaky").profs.Lockpicking.rank, 80, "Lockpicking rank")
+        eq(Char(saved, "Sneaky").profs.Lockpicking.max, 100, "Lockpicking max")
+        eq(Char(saved, "Wizard").profs.Comprehension.rank, 20, "Comprehension rank")
+    end)
+
+    test("skills are found by walking the skill list when the by-ID lookup fails", function()
+        local saved = T.Logout(T.Login({ name = "Sneaky", class = "ROGUE", skillsByID = false,
+            skills = { { id = 633, name = "Lockpicking", rank = 80, max = 100 } } }))
+        eq(Char(saved, "Sneaky").profs.Lockpicking.rank, 80, "Lockpicking rank")
+    end)
+
+    test("a rogue alt gets a lockbox button and a mage alt a scroll button", function()
+        local S = MainAtMailbox(RogueAndMageSaved(), { bags = Bags(LOCKBOX_BAGS) })
+        eq(T.Button(S, "lockboxes"):GetText(), "Send lockboxes (3)", "lockbox button")
+        eq(T.Button(S, "lockboxes").alt, "Sneaky", "lockboxes go to the rogue")
+        eq(T.Button(S, "scrolls"):GetText(), "Send scrolls (2)", "scroll button")
+        eq(T.Button(S, "scrolls").alt, "Wizard", "scrolls go to the mage")
+    end)
+
+    test("drafting lockboxes attaches only lockboxes", function()
+        local S = MainAtMailbox(RogueAndMageSaved(), { bags = Bags(LOCKBOX_BAGS) })
+        T.Button(S, "lockboxes"):Click()
+        S.Advance(1)
+        local ids = {}
+        for _, a in ipairs(S.Attachments()) do ids[#ids + 1] = a.id end
+        table.sort(ids)
+        eq(table.concat(ids, ","), "4632,4636,16882", "attached")
+        eq(S.env.SendMailNameEditBox:GetText(), "Sneaky", "recipient")
+        eq(S.env.SendMailSubjectEditBox:GetText(), "Lockboxes", "subject")
+        eq(#S.sent, 0, "nothing sent")
+    end)
+
+    test("tooltip marks lockboxes above the rogue's skill", function()
+        local S = MainAtMailbox(RogueAndMageSaved(), { bags = Bags(LOCKBOX_BAGS) })
+        local b = T.Button(S, "lockboxes")
+        b._scripts.OnEnter(b)
+        contains(S.env.GameTooltip._lines, "Strong Iron Lockbox.*needs 125", "too hard")
+        for _, l in ipairs(S.env.GameTooltip._lines) do
+            ok(not tostring(l):find("Battered Junkbox.*needs"), "junkbox is openable: " .. tostring(l))
+        end
+    end)
+
+    test("a rogue main keeps its own lockboxes until unticked", function()
+        local LP = { { id = 633, name = "Lockpicking", rank = 80, max = 100 } }
+        local saved = T.Logout(T.Login({ name = "Other", class = "ROGUE", skills = LP }))
+        local S = MainAtMailbox(saved, { class = "ROGUE", skills = LP, bags = Bags(LOCKBOX_BAGS) })
+        eq(T.Button(S, "lockboxes"):GetText(), "Send lockboxes (0)", "kept")
+        local box = T.Panel(S)
+        for _, f in ipairs(S.frames) do
+            if f._type == "CheckButton" and f._parent == box then f:Click() end
+        end
+        eq(T.Button(S, "lockboxes"):GetText(), "Send lockboxes (3)", "after unticking")
+    end)
+
+    test("selftest shows the raw skill line data", function()
+        local S = MainAtMailbox(TailorAltSaved(), { skills = { { id = 633, name = "Lockpicking", rank = 80, max = 100 } } })
+        S.Slash("/mailmats", "selftest")
+        contains(S.printLog, "Lockpicking %(633%):.*rank=80", "raw fields")
+        contains(S.printLog, "Comprehension %(3012%): not known", "unknown skill")
+        contains(S.printLog, "Self test passed", "selftest")
+    end)
 end

@@ -31,8 +31,12 @@ end
 
 local function ButtonTooltip(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:AddLine(("%s mats for %s"):format(self.prof, self.alt))
+    local what = ns.What(self.prof)
+    GameTooltip:AddLine(("%s for %s"):format(what:gsub("^%l", string.upper), self.alt))
     local stacks, totals, ids = ns.StacksFor(self.prof)
+    local alt = ns.db.chars[ns.realm][self.alt]
+    local skill = alt and alt.profs and alt.profs[self.prof]
+    local myRank = skill and skill.rank or 0
     if #ids == 0 then
         GameTooltip:AddLine("Nothing in your bags.", 0.6, 0.6, 0.6)
     else
@@ -45,6 +49,11 @@ local function ButtonTooltip(self)
             end
             local icon = GetItemIcon(id)
             local label = (icon and ("|T" .. icon .. ":14|t ") or "") .. (name or ("item " .. id))
+            local need = ns.SKILL_RANK[id]
+            if need and need > myRank then
+                -- a lockbox or scroll the alt cannot open yet
+                label = label .. (" |cffff6060(needs %d)|r"):format(need)
+            end
             GameTooltip:AddDoubleLine(label, "x" .. totals[id], r, g, b, 1, 1, 1)
         end
         GameTooltip:AddLine(" ")
@@ -93,7 +102,7 @@ function ns.Refresh()
                 local b = GetButton(nb)
                 b.alt, b.prof = alt, p
                 local stacks = ns.StacksFor(p)
-                b:SetText(("Send %s mats (%d)"):format(p, #stacks))
+                b:SetText(("Send %s (%d)"):format(ns.What(p), #stacks))
                 b:SetEnabled(#stacks > 0)
                 b:SetPoint("TOPLEFT", PAD + 8, y)
                 y = y - 24

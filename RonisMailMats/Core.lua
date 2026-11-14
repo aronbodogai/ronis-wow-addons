@@ -51,11 +51,34 @@ for prof, ids in pairs(ns.REAGENTS) do
     ns.IS_REAGENT[prof] = set
 end
 
+-- Items that need a non-crafting skill (Data/SkillItems.lua): a rogue's
+-- lockboxes, a mage's Comprehension scrolls. They go through the same
+-- lookup as reagents; SKILL_RANK[id] is the skill rank the item asks for.
+ns.SKILL_RANK = {}
+for skill, list in pairs(ns.SKILL_ITEMS or {}) do
+    local set = ns.IS_REAGENT[skill] or {}
+    for _, e in ipairs(list) do
+        set[e[1]] = true
+        ns.SKILL_RANK[e[1]] = e[2]
+    end
+    ns.IS_REAGENT[skill] = set
+end
+
 -- Order professions are shown in.
 ns.CRAFT_ORDER = {
     "Tailoring", "Leatherworking", "Blacksmithing", "Engineering", "Alchemy",
     "Enchanting", "Mining", "Cooking", "First Aid", "Poisons",
+    "Lockpicking", "Comprehension",
 }
+
+-- What a button sends ("Send <what> (N)"); professions default to "<prof> mats".
+local WHAT = { Lockpicking = "lockboxes", Comprehension = "scrolls" }
+function ns.What(prof)
+    return WHAT[prof] or (prof .. " mats")
+end
+
+-- Skills that GetProfessions does not list, read by skill line ID instead.
+ns.EXTRA_SKILLS = { [633] = "Lockpicking", [3012] = "Comprehension" }
 
 -- Profession skill line IDs -> the English names used as keys everywhere
 -- (GetProfessionInfo's name follows the client language; the ID does not).
@@ -65,11 +88,48 @@ ns.SKILL_LINES = {
     [197] = "Tailoring", [40] = "Poisons",
     [182] = "Herbalism", [393] = "Skinning", [356] = "Fishing",
 }
+for id, name in pairs(ns.EXTRA_SKILLS) do ns.SKILL_LINES[id] = name end
 
 -- Skill names we remember (crafting ones get buttons, gathering ones are
 -- only shown next to the character's name).
 local KNOWN_SKILLS = {}
 for _, p in pairs(ns.SKILL_LINES) do KNOWN_SKILLS[p] = true end
+
+-- Lockpicking and Comprehension are plain skill lines, not professions:
+-- C_SkillInfo.GetSkillLineInfoByID(id) -> { name, rank, maxRank?, skillID,
+-- isHeader, modifier } (field names as Questie and GatherLite use them on
+-- this client). Unknown skills come back nil or at rank 0.
+local function SkillMax(info)
+    return info.maxRank or info.skillMaxRank or info.max or info.rank
+end
+
+function ns.ReadExtraSkills(profs)
+    local SI = C_SkillInfo
+    if not SI then return false end
+    local any = false
+    local found = {}
+    if SI.GetSkillLineInfoByID then
+        for id, key in pairs(ns.EXTRA_SKILLS) do
+            local info = SI.GetSkillLineInfoByID(id)
+            if info and (info.rank or 0) > 0 then
+                profs[key] = { rank = info.rank, max = SkillMax(info) }
+                found[key], any = true, true
+            end
+        end
+    end
+    -- fallback: walk the skill list for anything the by-ID lookup missed
+    if SI.GetNumSkillLines and SI.GetSkillLineInfo then
+        for i = 1, SI.GetNumSkillLines() or 0 do
+            local info = SI.GetSkillLineInfo(i)
+            local key = info and not info.isHeader and info.skillID and ns.EXTRA_SKILLS[info.skillID]
+            if key and not found[key] and (info.rank or 0) > 0 then
+                profs[key] = { rank = info.rank, max = SkillMax(info) }
+                any = true
+            end
+        end
+    end
+    return any
+end
 
 ---------------------------------------------------------------------------
 -- Saved data
@@ -127,6 +187,7 @@ function ns.ReadProfessions()
                 end
             end
         end
+        if ns.ReadExtraSkills(profs) then any = true end
         return profs, "GetProfessions", any
     end
     if GetNumSkillLines and GetSkillLineInfo then
@@ -251,13 +312,14 @@ local function Attach(name, prof)
         end
     end
     if SendMailNameEditBox then SendMailNameEditBox:SetText(name) end
-    if SendMailSubjectEditBox then SendMailSubjectEditBox:SetText(prof .. " mats") end
+    local what = ns.What(prof)
+    if SendMailSubjectEditBox then SendMailSubjectEditBox:SetText((what:gsub("^%l", string.upper))) end
     local left = #stacks - attached - skipped
     if left > 0 then
-        ns.Print(("Drafted %d stacks of %s mats for %s. %d more stack(s) left - press the button again after sending.")
-            :format(attached, prof, name, left))
+        ns.Print(("Drafted %d stacks of %s for %s. %d more stack(s) left - press the button again after sending.")
+            :format(attached, what, name, left))
     else
-        ns.Print(("Drafted %d stack(s) of %s mats for %s. Review and press Send."):format(attached, prof, name))
+        ns.Print(("Drafted %d stack(s) of %s for %s. Review and press Send."):format(attached, what, name))
     end
     if ns.Refresh then ns.Refresh() end
 end
@@ -408,6 +470,18 @@ function ns.SelfTest()
     for p, info in pairs(profs or {}) do parts[#parts + 1] = p .. " " .. tostring(info.rank) end
     table.sort(parts)
     ns.Print(("Profession API: %s -> %s"):format(api, #parts > 0 and table.concat(parts, ", ") or "nothing"))
+    -- raw skill line data for Lockpicking / Comprehension, to check field names
+    local SI = C_SkillInfo
+    for id, key in pairs(ns.EXTRA_SKILLS) do
+        local info = SI and SI.GetSkillLineInfoByID and SI.GetSkillLineInfoByID(id)
+        local fields = {}
+        if type(info) == "table" then
+            for k, v in pairs(info) do fields[#fields + 1] = k .. "=" .. tostring(v) end
+            table.sort(fields)
+        end
+        ns.Print(("  %s (%d): %s"):format(key, id,
+            #fields > 0 and table.concat(fields, " ") or (SI and SI.GetSkillLineInfoByID and "not known" or "no C_SkillInfo")))
+    end
     local n = 0
     for _ in pairs(ns.db.chars[ns.realm] or {}) do n = n + 1 end
     ns.Print(("Realm '%s', %s, %d character(s) saved, %d alt(s) mailable."):format(

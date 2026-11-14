@@ -10,6 +10,9 @@
 --   name, realm, faction, class, level,
 --   profs    = { { line = 197, name = "Tailoring", rank = 150, max = 225 }, ... },
 --   profsReadyAt = seconds after login before the profession API answers,
+--   skills   = { { id = 633, name = "Lockpicking", rank = 80, max = 100 } }:
+--              plain skill lines, read with C_SkillInfo (forever flavor);
+--   skillsByID = false: C_SkillInfo.GetSkillLineInfoByID always returns nil
 --   bags     = { [0] = { [slot] = { id = 2589, count = 20, bound = false } } },
 --   saved    = { RonisMailMatsDB = ... },   -- from a previous session
 --   mailLag  = true: HasSendMailItem only updates on the next timer tick
@@ -24,6 +27,9 @@ local ITEMS = {
     [765] = { "Silverleaf", 1 }, [2447] = { "Peacebloom", 1 }, [785] = { "Mageroyal", 1 },
     [10940] = { "Strange Dust", 1 }, [6948] = { "Hearthstone", 1 },
     [2320] = { "Coarse Thread", 1 }, [3371] = { "Crystal Vial", 1 },
+    [4632] = { "Ornate Bronze Lockbox", 2 }, [16882] = { "Battered Junkbox", 1 },
+    [4636] = { "Strong Iron Lockbox", 2 },
+    [211780] = { "Scroll: KWYJIBO", 1 }, [213543] = { "Scroll: UPDOG", 1 },
 }
 
 -- Lua builtins visible to addon code (WoW runs Lua 5.1 plus a few helpers).
@@ -339,6 +345,23 @@ function mock.NewSession(opts)
             if not p then return end
             return p.name, 136240, p.rank, p.max, 5, 0, p.line, 0
         end
+        -- Plain skill lines (Lockpicking, Comprehension, weapon skills).
+        local skillList = { { name = "Secondary Skills", isHeader = true } }
+        for _, s in ipairs(opts.skills or {}) do
+            skillList[#skillList + 1] = { name = s.name, rank = s.rank, maxRank = s.max, skillID = s.id,
+                                          isHeader = false, modifier = 0 }
+        end
+        skillList[#skillList + 1] = { name = "Swords", rank = 100, maxRank = 300, skillID = 43, isHeader = false, modifier = 0 }
+        env.C_SkillInfo = {
+            GetNumSkillLines = function() return ProfsReady() and #skillList or 0 end,
+            GetSkillLineInfo = function(i) return ProfsReady() and skillList[i] or nil end,
+            GetSkillLineInfoByID = function(id)
+                if opts.skillsByID == false or not ProfsReady() then return nil end
+                for _, s in ipairs(skillList) do
+                    if s.skillID == id then return s end
+                end
+            end,
+        }
     else
         local lines = {}
         local function Build()
