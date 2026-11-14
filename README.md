@@ -116,6 +116,12 @@ Mails reagents to the alt who can use them.
   unless one is an upgrade for one of your alts (then it goes to that alt).
   Bind-on-pickup and soulbound items never count. `/mailmats greens off`
   stops it.
+  - Greens mailed to another player (a recipient, not one of your own
+    characters) ask cash on delivery: by default 100% of their vendor
+    price. The **Greens COD** button on the panel cycles off / 25% / 50% /
+    75% / 100% / 150% / 200% (left-click up, right-click down), or use
+    `/mailmats cod <percent>` / `/mailmats cod off`. Other items in the
+    same mail are not charged.
 - **Random messages:** every draft gets one of 100 messages in the mail
   body, in 20 tones (pirate, grumpy dwarf, secret agent, cozy grandma,
   corporate memo...), with the recipient's first name and what is sent

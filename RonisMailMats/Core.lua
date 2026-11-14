@@ -684,9 +684,55 @@ local function FreeSlot(used)
     end
 end
 
+---------------------------------------------------------------------------
+-- Cash on delivery for BoE greens sent to someone else for disenchanting:
+-- a share of their vendor price (db.greenCOD: percent, default 100; false
+-- = never). Never asked of your own characters - that would pay yourself.
+---------------------------------------------------------------------------
+ns.COD_STEPS = { false, 25, 50, 75, 100, 150, 200 }
+
+function ns.CODPercent()
+    local v = ns.db.greenCOD
+    if v == nil then return 100 end
+    return v or 0
+end
+
+-- A green that would go to an enchanter only because it is a BoE green.
+function ns.IsGreenForCOD(id)
+    return ns.IsDisenchantable(id) and not ((ns.IS_REAGENT.Enchanting or {})[id])
+end
+
+function ns.MoneyText(copper)
+    local g, s, c = math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100
+    local parts = {}
+    if g > 0 then parts[#parts + 1] = g .. "g" end
+    if s > 0 then parts[#parts + 1] = s .. "s" end
+    if c > 0 or #parts == 0 then parts[#parts + 1] = c .. "c" end
+    return table.concat(parts, " ")
+end
+
+local codSet = false -- whether the money field holds a COD we put there
+
+-- Sets (or clears) the draft's cash on delivery. Returns the amount set.
+function ns.SetDraftCOD(name, greenValue)
+    local mine = ns.db.chars[ns.realm][name] ~= nil
+    local pct = ns.CODPercent()
+    local copper = 0
+    if not mine and pct > 0 and greenValue > 0 then
+        copper = math.max(1, math.floor(greenValue * pct / 100))
+    end
+    if copper == 0 and not codSet then return 0 end -- leave the player's own money settings alone
+    if SendMailMoney and MoneyInputFrame_SetCopper then MoneyInputFrame_SetCopper(SendMailMoney, copper) end
+    if SendMailRadioButton_OnClick then SendMailRadioButton_OnClick(copper > 0 and 2 or 1) end
+    if SetSendMailCOD then SetSendMailCOD(copper) end
+    codSet = copper > 0
+    return copper
+end
+
 local function Attach(name, prof)
     local stacks = ns.StacksFor(prof, name)
     local attached, skipped = 0, 0
+    local greenValue = 0 -- vendor value of the BoE greens attached
     local used = {}
     ClearCursor()
     for _, s in ipairs(stacks) do
@@ -705,6 +751,10 @@ local function Attach(name, prof)
                     skipped = skipped + 1
                 else
                     attached = attached + 1
+                    if ns.IsGreenForCOD(s.id) then
+                        local sell = select(11, GetItemInfo(s.id)) or 0
+                        greenValue = greenValue + sell * (s.count or 1)
+                    end
                 end
             end
         end
@@ -714,12 +764,16 @@ local function Attach(name, prof)
     if SendMailSubjectEditBox then SendMailSubjectEditBox:SetText((what:gsub("^%l", string.upper))) end
     ns.lastDraft = { name = name, what = what }
     ns.FillMessage(false)
+    local cod = ns.SetDraftCOD(name, greenValue)
     local left = #stacks - attached - skipped
     if left > 0 then
         ns.Print(("Drafted %d stacks of %s for %s. %d more stack(s) left - press the button again after sending.")
             :format(attached, what, name, left))
     else
         ns.Print(("Drafted %d stack(s) of %s for %s. Review and press Send."):format(attached, what, name))
+    end
+    if cod and cod > 0 then
+        ns.Print(("Cash on delivery: %s (%d%% of the greens' vendor price)."):format(ns.MoneyText(cod), ns.CODPercent()))
     end
     if ns.Refresh then ns.Refresh() end
 end
@@ -839,6 +893,19 @@ SlashCmdList.RONISMAILMATS = function(msg)
         local cat = arg ~= "" and ns.FindCategory(arg) or nil
         if arg ~= "" and not cat then return ns.Print("No group called '" .. arg .. "'.") end
         ns.ToggleGroups(cat)
+    elseif cmd == "cod" then
+        local v = arg:lower():gsub("%%", "")
+        if v == "off" or v == "0" then
+            ns.db.greenCOD = false
+        elseif tonumber(v) then
+            ns.db.greenCOD = math.max(1, math.min(1000, math.floor(tonumber(v))))
+        elseif v ~= "" then
+            return ns.Print("Usage: /mailmats cod <percent of vendor price> | off")
+        end
+        local pct = ns.CODPercent()
+        ns.Print(pct == 0 and "Greens are sent without cash on delivery."
+            or ("Greens sent to other players ask %d%% of their vendor price as cash on delivery."):format(pct))
+        if ns.Refresh then ns.Refresh() end
     elseif cmd == "greens" then
         if arg == "off" then ns.db.noGreens = true elseif arg == "on" then ns.db.noGreens = nil end
         ns.Print(ns.db.noGreens and "BoE green gear is no longer sent to enchanters. /mailmats greens on turns it back on."

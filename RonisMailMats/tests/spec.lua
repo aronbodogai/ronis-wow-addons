@@ -868,4 +868,64 @@ return function(T)
         for _, x in ipairs(T.Buttons(S)) do if x.alt == "Wiz" and x.prof == "Upgrades" then up = x end end
         eq(up and up:GetText(), "Send upgrades (1)", "the hood goes to Wiz")
     end)
+
+    -----------------------------------------------------------------------
+    -- Cash on delivery for greens
+    -----------------------------------------------------------------------
+    local function CodButton(S)
+        for _, f in ipairs(S.frames) do
+            if f._parent == T.Panel(S) and (f._text or ""):find("^Greens") then return f end
+        end
+    end
+
+    test("greens to another player ask their vendor price as COD", function()
+        -- Green Axe sells for 10c in the mock; Strange Dust is a plain enchanting reagent
+        local S = MainAtMailbox(nil, { bags = Bags({ { 9010, 1 }, { 9010, 1 }, { 10940, 5 } }) })
+        S.Slash("/mailmats", "target Bob: enchanting")
+        T.Button(S, "Send all to Bob"):Click()
+        S.Advance(1)
+        eq(#S.Attachments(), 3, "two axes and the dust")
+        eq(S.mailMoney, 20, "COD = 2 x 10c, the dust is not counted")
+        eq(S.mailMode, 2, "COD selected")
+        contains(S.printLog, "Cash on delivery: 20c %(100%% of", "told")
+        -- after sending, the next draft uses the new share; "off" clears our COD
+        local function Again(setting)
+            local S2 = MainAtMailbox(T.Logout(S), { bags = Bags({ { 9010, 1 }, { 9010, 1 }, { 10940, 5 } }) })
+            S2.Slash("/mailmats", "cod " .. setting)
+            T.Button(S2, "Send all to Bob"):Click()
+            S2.Advance(1)
+            return S2
+        end
+        eq(Again("50").mailMoney, 10, "50%")
+        local S3 = Again("50")
+        S3.Slash("/mailmats", "cod off")
+        S3.ns.SetDraftCOD("Bob", 20)
+        eq(S3.mailMoney, 0, "off clears our COD")
+        eq(S3.mailMode, 1, "back to Send Money")
+    end)
+
+    test("no COD when the enchanter is one of your characters", function()
+        local saved = T.Logout(T.Login({ name = "Dusty", class = "PRIEST", profs = { ENCH } }))
+        local S = MainAtMailbox(saved, { bags = Bags({ { 9010, 1 } }) })
+        T.Button(S, "Enchanting"):Click()
+        S.Advance(1)
+        eq(#S.Attachments(), 1, "axe attached")
+        eq(S.mailMoney, 0, "no COD to yourself")
+        eq(S.mailMode, 1, "money mode untouched")
+    end)
+
+    test("the panel button cycles the COD share", function()
+        local S = MainAtMailbox(nil)
+        local b = CodButton(S)
+        eq(b:GetText(), "Greens COD: 100% of vendor", "default")
+        b._scripts.OnClick(b, "LeftButton")
+        eq(CodButton(S):GetText(), "Greens COD: 150% of vendor", "next")
+        b._scripts.OnClick(b, "RightButton")
+        b._scripts.OnClick(b, "RightButton")
+        eq(CodButton(S):GetText(), "Greens COD: 75% of vendor", "previous twice")
+        for _ = 1, 3 do b._scripts.OnClick(b, "RightButton") end
+        eq(CodButton(S):GetText(), "Greens: no COD", "off")
+        local S2 = MainAtMailbox(T.Logout(S))
+        eq(CodButton(S2):GetText(), "Greens: no COD", "kept after relog")
+    end)
 end

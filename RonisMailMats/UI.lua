@@ -6,7 +6,7 @@ local PAD = 10
 local GetItemInfo = GetItemInfo or (C_Item and C_Item.GetItemInfo)
 local GetItemIcon = GetItemIcon or (C_Item and C_Item.GetItemIconByID)
 
-local panel, title, keepBox, emptyText, addButton, msgButton, editor, keepText, keepChoose, keepFrame
+local panel, title, keepBox, emptyText, addButton, msgButton, editor, keepText, keepChoose, keepFrame, codButton
 local headers, buttons, removers = {}, {}, {}
 
 local function ClassColor(class)
@@ -216,6 +216,12 @@ function ns.Refresh()
     if ns.db.keepOwn then y = y - math.max(20, keepText:GetStringHeight() + 6) end
     if keepFrame and keepFrame:IsShown() then ns.RefreshKeepFrame() end
 
+    -- cash on delivery for greens sent to other players
+    local pct = ns.CODPercent()
+    codButton:SetPoint("TOPLEFT", PAD, y)
+    codButton:SetText(pct == 0 and "Greens: no COD" or ("Greens COD: %d%% of vendor"):format(pct))
+    y = y - 26
+
     panel:SetHeight(-y + PAD)
 end
 
@@ -260,6 +266,28 @@ function ns.InitUI()
     keepChoose:SetSize(64, 20)
     keepChoose:SetText("Choose")
     keepChoose:SetScript("OnClick", function() ns.ToggleKeepFrame() end)
+
+    -- left-click: next COD step, right-click: previous
+    codButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    codButton:SetSize(WIDTH - 2 * PAD, 22)
+    codButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    codButton:SetScript("OnClick", function(_, button)
+        local steps, cur = ns.COD_STEPS, ns.CODPercent()
+        local at = 1
+        for i, v in ipairs(steps) do if (v or 0) == cur then at = i end end
+        at = at + (button == "RightButton" and -1 or 1)
+        if at > #steps then at = 1 elseif at < 1 then at = #steps end
+        ns.db.greenCOD = steps[at]
+        ns.Refresh()
+    end)
+    codButton:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine("Cash on delivery for greens")
+        GameTooltip:AddLine("BoE green weapons and armor mailed to another player for disenchanting ask this share of their vendor price as cash on delivery. Never for your own characters.", 1, 1, 1, true)
+        GameTooltip:AddLine("Left-click: more. Right-click: less. Also /mailmats cod <percent> | off", 0.6, 0.6, 0.6, true)
+        GameTooltip:Show()
+    end)
+    codButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     addButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     addButton:SetSize(WIDTH - 2 * PAD, 22)

@@ -556,6 +556,13 @@ function mock.NewSession(opts)
     env.SendMailFrame:Hide()
     env.SendMailNameEditBox = env.CreateFrame("EditBox", "SendMailNameEditBox", env.SendMailFrame)
     env.SendMailSubjectEditBox = env.CreateFrame("EditBox", "SendMailSubjectEditBox", env.SendMailFrame)
+    -- money field and Send Money / COD radio buttons (Classic mail frame)
+    env.SendMailMoney = env.CreateFrame("Frame", "SendMailMoney", env.SendMailFrame)
+    S.mailMoney, S.mailMode, S.cod = 0, 1, 0
+    env.MoneyInputFrame_SetCopper = function(frame, copper) if frame == env.SendMailMoney then S.mailMoney = copper end end
+    env.MoneyInputFrame_GetCopper = function() return S.mailMoney end
+    env.SendMailRadioButton_OnClick = function(index) S.mailMode = index end
+    env.SetSendMailCOD = function(c) S.cod = c end
     env.SendMailBodyEditBox = env.CreateFrame("EditBox", "SendMailBodyEditBox", env.SendMailFrame)
     env.MailFrameTab1 = env.CreateFrame("Button", "MailFrameTab1", env.MailFrame)
     env.MailFrameTab2 = env.CreateFrame("Button", "MailFrameTab2", env.MailFrame)
