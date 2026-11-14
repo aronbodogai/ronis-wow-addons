@@ -13,7 +13,8 @@ A Factoriopedia-style item window.
   Action bar buttons are skipped because Alt-click there is self-cast.
 - Left: search box plus **Bags / Recent** item grids.
 - Right: header, then sections:
-  - **Created by**: every recipe that makes the item (reagents -> product)
+  - **Created by**: every recipe that makes the item (reagents -> product), with
+    skill levels and where to learn it (recipe item and its vendor, or the nearest trainers)
   - **Teaches**: for patterns/plans/formulas, the recipe they teach
   - **Used in**: every recipe that uses the item, grouped by profession
   - **Required for quests**: quests needing the item, with level, zone, giver and map button
@@ -43,6 +44,7 @@ Regenerating recipes after a game patch:
     # download CSVs for SkillLineAbility, SkillLine, SpellReagents, SpellEffect from
     # https://wago.tools/db2/<Table>/csv?build=<build> into a folder, then:
     node RonisItemPedia/tools/gen_recipes.js <csv-folder> <build> > RonisItemPedia/Data/Recipes.lua
+    node RonisMailMats/tools/gen_reagents.js > RonisMailMats/Data/Reagents.lua
 
 ## RonisMailMats — "Roni's MailMats"
 

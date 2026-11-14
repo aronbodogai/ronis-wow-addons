@@ -16,9 +16,9 @@ const profs = JSON.parse(
   "[" + text.match(/ns\.RECIPE_PROFS = \{([^}]*)\}/)[1] + "]"
 );
 
-// Each recipe line: {spellID,profIndex,product,min,max,{reagent,count,...}},
+// Each recipe line: {spellID,profIndex,product,min,max,{reagent,count,...}[,skill fields,{recipe items}]},
 const sets = profs.map(() => new Set());
-const re = /^\s*\{(\d+),(\d+),(\d+),(\d+),(\d+),\{([\d,]*)\}\},?\s*$/gm;
+const re = /^\s*\{(\d+),(\d+),(\d+),(\d+),(\d+),\{([\d,]*)\}(?:,[\d,]*,\{[\d,]*\})?\},?\s*$/gm;
 let m, n = 0;
 while ((m = re.exec(text))) {
   n++;
