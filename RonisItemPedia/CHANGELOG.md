@@ -12,6 +12,8 @@
 - **Learn from** under each recipe in Created by: the recipe item with its
   nearest vendor (or how it drops), or the nearest trainers of your faction
   for trainer recipes, each with a map button.
+- **Quest reward** rows now show level, required level, zone and quest
+  giver, with a map button to the giver. Other-faction quests are hidden.
 
 ## v0.3.0
 

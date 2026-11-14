@@ -405,11 +405,6 @@ local function ObjectText(row)
     return row.name .. (row.zone and ("  |cff8c8c8c" .. row.zone .. "|r") or "")
 end
 
-local function QuestText(row)
-    local lvl = (type(row.level) == "number" and row.level > 0) and ("|cff8c8c8c[" .. row.level .. "]|r ") or ""
-    return lvl .. "|cffffd100" .. row.name .. "|r"
-end
-
 -- "[24] Quest name  req 20 - Zone - Giver", greyed out when already done
 local function QuestReqText(row)
     local lvl = (type(row.level) == "number" and row.level > 0) and ("[" .. row.level .. "] ") or ""
@@ -514,7 +509,9 @@ function UI:DrawLearn(s, r, cy)
         elseif e.dropsTotal > 0 then
             text = text .. "  |cff8c8c8c-  drops from " .. e.dropsTotal .. (e.dropsTotal == 1 and " source" or " sources") .. "|r"
         elseif e.quest then
-            text = text .. "  |cff8c8c8c-  quest reward|r"
+            row = e.quest
+            text = text .. "  |cff8c8c8c-|r  Quest reward: " .. QuestReqText(row)
+            if e.questsTotal > 1 then text = text .. "  |cff8c8c8c(+" .. (e.questsTotal - 1) .. " more)|r" end
         end
         DrawRow(s, text, row, cy + 2, 38)
         cy = cy + 26
@@ -1002,7 +999,7 @@ function UI:Render()
     y = self:SectionContainers(src, y)
     y = self:SectionRows("Gathered from", src.objects, src.objectsTotal, ObjectText, y)
     y = self:SectionRows("Sold by", src.vendors, src.vendorsTotal, NpcText, y)
-    y = self:SectionRows("Quest reward", src.quests, nil, QuestText, y)
+    y = self:SectionRows("Quest reward", src.quests, src.questsTotal, QuestReqText, y)
     y = self:SectionProperties(link, id, info, y)
     y = self:SectionTooltip(full or link, y)
     self.content:SetHeight(math.max(1, y))

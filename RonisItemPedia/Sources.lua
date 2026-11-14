@@ -314,12 +314,15 @@ function ns.GetSources(itemID)
     SortRows(out.vendors)
     out.vendorsTotal = Trim(out.vendors)
 
+    -- quest rewards: located at the quest giver, like quests that need the item
     for _, q in ipairs(List(Get("ItemDB", itemID, "questRewards"))) do
-        local name = Get("QuestDB", q, "name")
-        if name then
-            out.quests[#out.quests + 1] = { id = q, name = name, level = Get("QuestDB", q, "questLevel") }
+        if AvailableToPlayer(q) then
+            local row = QuestRow(q, player)
+            if row then out.quests[#out.quests + 1] = row end
         end
     end
+    SortQuests(out.quests)
+    out.questsTotal = Trim(out.quests)
 
     out.requiredFor = {}
     if questsByItem then
@@ -431,7 +434,15 @@ function ns.LearnSources(recipe)
             SortRows(vendors)
             e.vendor, e.vendorsTotal = vendors[1], #vendors
             e.dropsTotal = #List(Get("ItemDB", item, "npcDrops")) + #List(Get("ItemDB", item, "objectDrops"))
-            e.quest = #List(Get("ItemDB", item, "questRewards")) > 0
+            local quests = {}
+            for _, q in ipairs(List(Get("ItemDB", item, "questRewards"))) do
+                if AvailableToPlayer(q) then
+                    local row = QuestRow(q, player)
+                    if row then quests[#quests + 1] = row end
+                end
+            end
+            SortQuests(quests)
+            e.quest, e.questsTotal = quests[1], #quests
         end
         out.items[#out.items + 1] = e
     end
