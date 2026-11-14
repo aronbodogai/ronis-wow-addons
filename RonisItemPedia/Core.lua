@@ -82,7 +82,8 @@ end
 
 ---------------------------------------------------------------------------
 -- Recipe index over Data/Recipes.lua
--- ns.RECIPES[i] = { spellID, profIndex, productID (0 = enchant), min, max, { reagentID, count, ... } }
+-- ns.RECIPES[i] = { spellID, profIndex, productID (0 = enchant), min, max, { reagentID, count, ... },
+--                  learnSkill (0 = unknown), yellowSkill, greySkill, autoLearned, { recipeItemID, ... } }
 ---------------------------------------------------------------------------
 ns.madeBy, ns.usedIn, ns.bySpell = {}, {}, {}
 
@@ -118,6 +119,11 @@ function ns.Recipe(index)
         product = r[3] > 0 and r[3] or nil,
         min = r[4], max = r[5],
         reagents = reagents,
+        learn = (r[7] or 0) > 0 and r[7] or nil,
+        yellow = (r[8] or 0) > 0 and r[8] or nil,
+        grey = (r[9] or 0) > 0 and r[9] or nil,
+        auto = r[10] == 1,
+        recipeItems = r[11] or {},
     }
 end
 

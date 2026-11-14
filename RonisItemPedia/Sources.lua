@@ -206,6 +206,7 @@ function ns.StartQuestScan()
             ticker:Cancel()
             questsByItem, ns.questScanning = index, false
             if ns.UI and ns.UI.OnDataChanged then ns.UI:OnDataChanged(true) end
+            ns.StartTrainerScan()
         end
     end)
 end
@@ -336,6 +337,127 @@ function ns.GetSources(itemID)
 
     local teaches = Get("ItemDB", itemID, "teachesSpell")
     if type(teaches) == "number" and teaches > 0 then out.teaches = teaches end
+    return out
+end
+
+---------------------------------------------------------------------------
+-- Profession trainers, found by their title ("Cooking Trainer", "Expert
+-- Leatherworker"...). Also scanned in the background, after the quests.
+---------------------------------------------------------------------------
+local trainersByProf -- [profIndex] = { npcID, ... } once ready
+local NPCS_PER_FRAME = 400
+local TRAINER_FLAG = 16
+
+-- profIndex (see ns.RECIPE_PROFS) -> words in the trainer's title
+local PROF_WORDS = {
+    { "Alchemist", "Alchemy" }, { "Blacksmith" }, { "Cook" }, { "Enchant" },
+    { "Engineer" }, { "First Aid" }, { "Leatherwork" }, { "Mining", "Miner" }, { "Tailor" },
+}
+local RANK_WORDS = { "Trainer", "Apprentice", "Journeyman", "Expert", "Artisan", "Master", "Grand Master" }
+
+local function TrainerProf(sub)
+    if type(sub) ~= "string" or sub == "" then return nil end
+    local ranked = false
+    for _, w in ipairs(RANK_WORDS) do
+        if sub:find(w, 1, true) then ranked = true; break end
+    end
+    if not ranked then return nil end -- "Blacksmithing Supplies" etc. are vendors
+    for prof, words in ipairs(PROF_WORDS) do
+        for _, w in ipairs(words) do
+            if sub:find(w, 1, true) then return prof end
+        end
+    end
+end
+
+function ns.TrainerIndexReady()
+    return trainersByProf ~= nil
+end
+
+function ns.StartTrainerScan()
+    local ndb = DB("NpcDB")
+    if trainersByProf or ns.trainerScanning or not ndb or type(ndb.GetAllIds) ~= "function" then return end
+    local ok, ids = pcall(ndb.GetAllIds)
+    if not ok or type(ids) ~= "table" then return end
+    ns.trainerScanning = true
+    local index, i = {}, 1
+    local ticker
+    ticker = C_Timer.NewTicker(0, function()
+        local stop = math.min(i + NPCS_PER_FRAME - 1, #ids)
+        for k = i, stop do
+            local npc = ids[k]
+            local prof = TrainerProf(Get("NpcDB", npc, "subName"))
+            if prof then
+                local flags = Get("NpcDB", npc, "npcFlags")
+                if type(flags) ~= "number" or not band or band(flags, TRAINER_FLAG) ~= 0 then
+                    index[prof] = index[prof] or {}
+                    table.insert(index[prof], npc)
+                end
+            end
+        end
+        i = stop + 1
+        if i > #ids then
+            ticker:Cancel()
+            trainersByProf, ns.trainerScanning = index, false
+            if ns.UI and ns.UI.OnDataChanged then ns.UI:OnDataChanged(true) end
+        end
+    end)
+end
+
+local function Faction(npc)
+    local f = Get("NpcDB", npc, "friendlyToFaction")
+    if f == "A" or f == "H" then return f end
+end
+
+-- Where a recipe is learned:
+-- { auto = true } for recipes that come with the profession, else
+-- { items = { { id, vendor = row, vendorsTotal, dropsTotal } }, trainers = {rows}, trainersTotal }
+function ns.LearnSources(recipe)
+    local out = { items = {}, trainers = {} }
+    if #recipe.recipeItems == 0 and recipe.auto then
+        out.auto = true
+        return out
+    end
+    local px, py, pinst = PlayerWorldPos()
+    local player = px and { px, py, pinst } or nil
+
+    for _, item in ipairs(recipe.recipeItems) do
+        local e = { id = item, dropsTotal = 0, vendorsTotal = 0 }
+        if ns.HasQuestieDB() then
+            local vendors = {}
+            for _, npc in ipairs(List(Get("ItemDB", item, "vendors"))) do
+                local row = NpcRow(npc, nil, player)
+                if row then vendors[#vendors + 1] = row end
+            end
+            SortRows(vendors)
+            e.vendor, e.vendorsTotal = vendors[1], #vendors
+            e.dropsTotal = #List(Get("ItemDB", item, "npcDrops")) + #List(Get("ItemDB", item, "objectDrops"))
+            e.quest = #List(Get("ItemDB", item, "questRewards")) > 0
+        end
+        out.items[#out.items + 1] = e
+    end
+
+    if #recipe.recipeItems == 0 then
+        out.trainer = true
+        if trainersByProf then
+            local mine = UnitFactionGroup and UnitFactionGroup("player")
+            mine = mine == "Alliance" and "A" or mine == "Horde" and "H" or nil
+            for _, npc in ipairs(trainersByProf[recipe.profIndex] or {}) do
+                local f = Faction(npc)
+                if not (mine and f and f ~= mine) then
+                    local row = NpcRow(npc, nil, player)
+                    if row then
+                        row.title = Get("NpcDB", npc, "subName")
+                        out.trainers[#out.trainers + 1] = row
+                    end
+                end
+            end
+            SortRows(out.trainers)
+            out.trainersTotal = #out.trainers
+            for k = #out.trainers, 4, -1 do out.trainers[k] = nil end
+        else
+            out.trainersScanning = ns.trainerScanning or ns.questScanning
+        end
+    end
     return out
 end
 

@@ -271,11 +271,36 @@ local function ChanceText(c)
     return string.format("%.2f%%", c)
 end
 
+-- Skill colours like the profession window: orange (learn), yellow, green, grey.
+local function SkillText(r)
+    local parts = {}
+    if r.learn then parts[#parts + 1] = "|cffff8040" .. r.learn .. "|r" end
+    if r.yellow then parts[#parts + 1] = "|cffffff00" .. r.yellow .. "|r" end
+    if r.yellow and r.grey then parts[#parts + 1] = "|cff40c040" .. math.floor((r.yellow + r.grey) / 2) .. "|r" end
+    if r.grey then parts[#parts + 1] = "|cff808080" .. r.grey .. "|r" end
+    if #parts == 0 then return nil end
+    return "Skill  " .. table.concat(parts, "  ")
+end
+
+local KnowsSpell = IsPlayerSpell or IsSpellKnown
+
 -- Draws "Profession - Recipe" and "reagents -> product" at cy; returns new cy.
 local function DrawRecipe(s, r, cy, currentID)
     local lbl = s:Text("GameFontHighlightSmall", 0.75, 0.75, 0.75)
     lbl:SetPoint("TOPLEFT", 10, -cy)
-    lbl:SetText("|cffffd100" .. r.prof .. "|r  -  " .. (ns.SpellInfo(r.spell) or ("Spell " .. r.spell)))
+    local title = "|cffffd100" .. r.prof .. "|r  -  " .. (ns.SpellInfo(r.spell) or ("Spell " .. r.spell))
+    if KnowsSpell then
+        local ok, known = pcall(KnowsSpell, r.spell)
+        if ok and known then title = title .. "  |cff40ff40(known)|r" end
+    end
+    lbl:SetText(title)
+    local skill = SkillText(r)
+    if skill then
+        local st = s:Text("GameFontHighlightSmall", 0.6, 0.6, 0.6)
+        st:SetPoint("TOPRIGHT", -10, -cy)
+        st:SetJustifyH("RIGHT")
+        st:SetText(skill)
+    end
     cy = cy + 16
     local x = 10
     for _, rg in ipairs(r.reagents) do
@@ -305,7 +330,11 @@ function UI:SectionCreatedBy(id, y)
     if not list then return y end
     local s = self:AcquireSection("Created by (" .. #list .. ")", y)
     local cy = SECTION_TOP
-    for _, idx in ipairs(list) do cy = DrawRecipe(s, ns.Recipe(idx), cy, id) end
+    for _, idx in ipairs(list) do
+        local r = ns.Recipe(idx)
+        cy = DrawRecipe(s, r, cy, id)
+        cy = self:DrawLearn(s, r, cy - 4) + 4
+    end
     return Finish(s, cy - 4, y)
 end
 
@@ -404,6 +433,32 @@ function UI:SectionQuestsScanning(src, y)
     return Finish(s, SECTION_TOP + 16, y)
 end
 
+-- One text row with optional chance/distance and a map button on the right.
+local function DrawRow(s, text, row, cy, left)
+    left = left or 10
+    local l = s:Text("GameFontHighlightSmall")
+    l:SetPoint("TOPLEFT", left, -cy - 2)
+    l:SetWidth(CW - 140 - left)
+    l:SetWordWrap(false)
+    l:SetText(text)
+
+    local right = 10
+    if row and row.kind and ns.CanShowOnMap(row) then
+        local b = s:MapButton(row)
+        b:SetPoint("TOPRIGHT", -8, -cy)
+        right = 32
+    end
+    local parts = {}
+    if row and row.chance then parts[#parts + 1] = "|cffffd100" .. ChanceText(row.chance) .. "|r" end
+    if row and row.dist then parts[#parts + 1] = "|cff8c8c8c" .. DistanceText(row.dist) .. "|r" end
+    if #parts > 0 then
+        local r = s:Text("GameFontHighlightSmall")
+        r:SetPoint("TOPRIGHT", -right, -cy - 2)
+        r:SetJustifyH("RIGHT")
+        r:SetText(table.concat(parts, "   "))
+    end
+end
+
 function UI:SectionRows(title, rows, total, fmt, y)
     if #rows == 0 then return y end
     total = total or #rows
@@ -411,30 +466,8 @@ function UI:SectionRows(title, rows, total, fmt, y)
     local cy = SECTION_TOP
     local anyChance = false
     for _, row in ipairs(rows) do
-        local l = s:Text("GameFontHighlightSmall")
-        l:SetPoint("TOPLEFT", 10, -cy - 2)
-        l:SetWidth(CW - 150)
-        l:SetWordWrap(false)
-        l:SetText(fmt(row))
-
-        local right = 10
-        if row.kind and ns.CanShowOnMap(row) then
-            local b = s:MapButton(row)
-            b:SetPoint("TOPRIGHT", -8, -cy)
-            right = 32
-        end
-        local parts = {}
-        if row.chance then
-            anyChance = true
-            parts[#parts + 1] = "|cffffd100" .. ChanceText(row.chance) .. "|r"
-        end
-        if row.dist then parts[#parts + 1] = "|cff8c8c8c" .. DistanceText(row.dist) .. "|r" end
-        if #parts > 0 then
-            local r = s:Text("GameFontHighlightSmall")
-            r:SetPoint("TOPRIGHT", -right, -cy - 2)
-            r:SetJustifyH("RIGHT")
-            r:SetText(table.concat(parts, "   "))
-        end
+        if row.chance then anyChance = true end
+        DrawRow(s, fmt(row), row, cy)
         cy = cy + 20
     end
     if total > #rows then
@@ -450,6 +483,64 @@ function UI:SectionRows(title, rows, total, fmt, y)
         cy = cy + 16
     end
     return Finish(s, cy, y)
+end
+
+-- "Learn from" lines under a recipe: recipe items (with their nearest vendor),
+-- or the nearest profession trainers.
+function UI:DrawLearn(s, r, cy)
+    local ok, src = pcall(ns.LearnSources, r)
+    if not ok or type(src) ~= "table" then return cy end
+    local head = s:Text("GameFontDisableSmall")
+    head:SetPoint("TOPLEFT", 10, -cy)
+    if src.auto then
+        head:SetText("Learned automatically with " .. r.prof .. ".")
+        return cy + 18
+    end
+    head:SetText("Learn from")
+    cy = cy + 14
+    for _, e in ipairs(src.items) do
+        local b = s:Slot(22)
+        b:SetPoint("TOPLEFT", 10, -cy)
+        ns.SetSlot(b, "item:" .. e.id)
+        local name, _, q = ns.GetItemInfo(e.id)
+        if not name then self.waitNames[e.id] = true end
+        local hex = GetItemQualityColor and select(4, GetItemQualityColor(q or 1)) or "ffffffff"
+        local text = "|c" .. hex .. (name or ("Item " .. e.id)) .. "|r"
+        local row
+        if e.vendor then
+            row = e.vendor
+            text = text .. "  |cff8c8c8c-|r  Sold by " .. NpcText(row)
+            if e.vendorsTotal > 1 then text = text .. "  |cff8c8c8c(+" .. (e.vendorsTotal - 1) .. " more)|r" end
+        elseif e.dropsTotal > 0 then
+            text = text .. "  |cff8c8c8c-  drops from " .. e.dropsTotal .. (e.dropsTotal == 1 and " source" or " sources") .. "|r"
+        elseif e.quest then
+            text = text .. "  |cff8c8c8c-  quest reward|r"
+        end
+        DrawRow(s, text, row, cy + 2, 38)
+        cy = cy + 26
+    end
+    if src.trainer then
+        if #src.trainers == 0 then
+            local t = s:Text("GameFontHighlightSmall", 0.75, 0.75, 0.75)
+            t:SetPoint("TOPLEFT", 10, -cy - 2)
+            t:SetText(r.prof .. " trainer" .. (src.trainersScanning and "  |cff8c8c8c(finding trainers...)|r" or ""))
+            cy = cy + 20
+        end
+        for _, row in ipairs(src.trainers) do
+            local text = "|cffffffff" .. row.name .. "|r"
+            if row.title then text = text .. "  |cffffd100<" .. row.title .. ">|r" end
+            if row.zone then text = text .. "  |cff8c8c8c" .. row.zone .. "|r" end
+            DrawRow(s, text, row, cy)
+            cy = cy + 20
+        end
+        if (src.trainersTotal or 0) > #src.trainers then
+            local more = s:Text("GameFontDisableSmall")
+            more:SetPoint("TOPLEFT", 10, -cy)
+            more:SetText("...and " .. (src.trainersTotal - #src.trainers) .. " more trainers")
+            cy = cy + 16
+        end
+    end
+    return cy + 4
 end
 
 function UI:SectionContainers(src, y)
@@ -863,6 +954,7 @@ function UI:Render()
         self.renderedLink = link
     end
     self.pending = nil
+    self.waitNames = {}
 
     if not link then
         self.hdrSlot:Hide()
@@ -981,6 +1073,8 @@ function UI:OnItemInfo(itemID)
     if not (self.frame and self.frame:IsShown()) then return end
     if self.pending and self.pending == itemID then
         self:Render()
+    elseif self.waitNames and self.waitNames[itemID] then
+        self:OnDataChanged(true)
     else
         self:OnDataChanged(false)
     end

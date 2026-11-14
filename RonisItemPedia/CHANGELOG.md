@@ -7,6 +7,11 @@
   faction cannot take are hidden, ones you already finished are greyed out
   and listed last.
 - Map button on each quest: pins the quest giver and opens the world map.
+- Recipes show their skill levels (learn, yellow, green, grey) and whether
+  you already know them.
+- **Learn from** under each recipe in Created by: the recipe item with its
+  nearest vendor (or how it drops), or the nearest trainers of your faction
+  for trainer recipes, each with a map button.
 
 ## v0.3.0
 
