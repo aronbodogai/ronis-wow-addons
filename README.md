@@ -104,6 +104,18 @@ Mails reagents to the alt who can use them.
   group of your own (blue), which you can give to recipients like any
   other; **Delete group** removes it and takes it off every recipient.
   Drag the minimap button to move it; `/mailmats minimap` hides or shows it.
+- **Waylaid Supplies and Waylaid Crates** go to the profession that fills
+  them: the crafter of what they ask for (Journeyman Fabrics: Tailoring and
+  Leatherworking; Apprentice Parts: Engineering), or for raw materials the
+  profession of their type (cloth Tailoring, leather Leatherworking, ore and
+  bars Mining, herbs Alchemy, dust and shards Enchanting). The list
+  (`Data/Crates.lua`, 134 crates) is generated from the client's own data by
+  `tools/gen_crates.js` (needs Item, ItemSparse, ItemXItemEffect,
+  ItemEffect, SpellReagents and Spell CSVs from wago.tools).
+- **BoE green weapons and armor** go to Enchanting, to be disenchanted,
+  unless one is an upgrade for one of your alts (then it goes to that alt).
+  Bind-on-pickup and soulbound items never count. `/mailmats greens off`
+  stops it.
 - **Random messages:** every draft gets one of 100 messages in the mail
   body, in 20 tones (pirate, grumpy dwarf, secret agent, cozy grandma,
   corporate memo...), with the recipient's first name and what is sent

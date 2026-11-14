@@ -101,6 +101,37 @@ for skill, list in pairs(ns.SKILL_ITEMS or {}) do
     end
     ns.BASE_GROUP[skill] = set
 end
+
+-- Waylaid Supplies and Waylaid Crates (Data/Crates.lua) go to the
+-- profession that makes, or mostly uses, what they ask for.
+for id, profs in pairs(ns.CRATES or {}) do
+    for _, p in ipairs(profs) do
+        ns.BASE_GROUP[p] = ns.BASE_GROUP[p] or {}
+        ns.BASE_GROUP[p][id] = true
+    end
+end
+
+-- Bind-on-equip green weapons and armor belong to Enchanting (to be
+-- disenchanted). Decided from the item's own data, so it is not a list.
+function ns.IsDisenchantable(id)
+    if ns.db and ns.db.noGreens then return false end
+    local name, _, quality, _, _, _, _, _, equipLoc, _, _, classID, _, bindType = GetItemInfo(id)
+    return name ~= nil and quality == 2 and bindType == 2 and (classID == 2 or classID == 4)
+        and equipLoc ~= nil and equipLoc ~= ""
+end
+
+-- Whether an item belongs to a group (a name, or a list of names).
+function ns.InGroup(cat, id)
+    if type(cat) == "table" then
+        for _, c in ipairs(cat) do
+            if ns.InGroup(c, id) then return true end
+        end
+        return false
+    end
+    local set = ns.IS_REAGENT[cat]
+    if set and set[id] then return true end
+    return cat == "Enchanting" and ns.IsDisenchantable(id)
+end
 ns.IS_REAGENT = {}
 for cat, set in pairs(ns.BASE_GROUP) do
     local copy = {}
@@ -533,7 +564,7 @@ function ns.HoldReason(id)
     if ns.db.ignore[id] then return "ignored" end
     if ns.db.keepOwn then
         for _, p in ipairs(ns.MyCraftProfs()) do
-            if ns.KeepsFor(p) and ns.IS_REAGENT[p] and ns.IS_REAGENT[p][id] then
+            if ns.KeepsFor(p) and ns.InGroup(p, id) then
                 return "kept for your " .. p
             end
         end
@@ -542,19 +573,12 @@ end
 
 -- Items of a group that are in the bags but held back: { {id, count, reason} }.
 function ns.HeldFor(prof)
-    local set = ns.IS_REAGENT[prof]
-    if type(prof) == "table" then
-        set = {}
-        for _, p in ipairs(prof) do
-            for id in pairs(ns.IS_REAGENT[p] or {}) do set[id] = true end
-        end
-    end
     local out, index = {}, {}
-    if not set then return out end
+    if type(prof) ~= "table" and not ns.IS_REAGENT[prof] then return out end
     for bag = 0, (NUM_BAG_SLOTS or 4) do
         for slot = 1, (GetContainerNumSlots(bag) or 0) do
             local id = GetContainerItemID(bag, slot)
-            local why = id and set[id] and ns.HoldReason(id)
+            local why = id and ns.InGroup(prof, id) and ns.HoldReason(id)
             if why then
                 local count = SlotInfo(bag, slot) or 1
                 if index[id] then
@@ -574,15 +598,8 @@ end
 -- prof "Upgrades" means gear that is an upgrade for `alt` (Gear.lua).
 function ns.StacksFor(prof, alt)
     local upgrades = prof == "Upgrades"
-    local set = ns.IS_REAGENT[prof]
-    if type(prof) == "table" then -- several categories at once (a recipient's)
-        set = {}
-        for _, p in ipairs(prof) do
-            for id in pairs(ns.IS_REAGENT[p] or {}) do set[id] = true end
-        end
-    end
     local stacks, totals, ids = {}, {}, {}
-    if not set and not upgrades then return stacks, totals, ids end
+    if not upgrades and type(prof) ~= "table" and not ns.IS_REAGENT[prof] then return stacks, totals, ids end
     for bag = 0, (NUM_BAG_SLOTS or 4) do
         for slot = 1, (GetContainerNumSlots(bag) or 0) do
             local id = GetContainerItemID(bag, slot)
@@ -590,7 +607,12 @@ function ns.StacksFor(prof, alt)
             if upgrades then
                 wanted = id and not ns.db.ignore[id] and ns.IsUpgradeIn(bag, slot, alt)
             else
-                wanted = id and set[id] and not ns.HoldReason(id)
+                wanted = id and ns.InGroup(prof, id) and not ns.HoldReason(id)
+                -- a green that upgrades one of your alts is not disenchant fodder
+                if wanted and ns.IsDisenchantable(id) and not (ns.IS_REAGENT.Enchanting or {})[id]
+                    and ns.IsUpgradeIn and ns.IsUpgradeIn(bag, slot) then
+                    wanted = false
+                end
             end
             if wanted then
                 local count, _, bound = SlotInfo(bag, slot)
@@ -817,6 +839,11 @@ SlashCmdList.RONISMAILMATS = function(msg)
         local cat = arg ~= "" and ns.FindCategory(arg) or nil
         if arg ~= "" and not cat then return ns.Print("No group called '" .. arg .. "'.") end
         ns.ToggleGroups(cat)
+    elseif cmd == "greens" then
+        if arg == "off" then ns.db.noGreens = true elseif arg == "on" then ns.db.noGreens = nil end
+        ns.Print(ns.db.noGreens and "BoE green gear is no longer sent to enchanters. /mailmats greens on turns it back on."
+            or "BoE green weapons and armor go to Enchanting (except upgrades for your alts). /mailmats greens off stops it.")
+        if ns.Refresh then ns.Refresh() end
     elseif cmd == "message" or cmd == "messages" then
         if arg == "off" then
             ns.db.noMessage = true

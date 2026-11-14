@@ -822,4 +822,50 @@ return function(T)
         MsgButton(S):Click()
         ok(Body(S) ~= "", "the button still works")
     end)
+
+    -----------------------------------------------------------------------
+    -- Waylaid crates, BoE greens for enchanters
+    -----------------------------------------------------------------------
+    local LW = { line = 165, name = "Leatherworking", rank = 100, max = 150 }
+    local ALCH = { line = 171, name = "Alchemy", rank = 100, max = 150 }
+    local ENCH = { line = 333, name = "Enchanting", rank = 100, max = 150 }
+
+    test("Waylaid crates go to the profession that fills them", function()
+        local saved = T.Logout(T.Login({ name = "Tailor", class = "PRIEST", profs = TAILOR }))
+        saved = T.Logout(T.Login({ name = "Leather", class = "ROGUE", profs = { LW } }, saved))
+        saved = T.Logout(T.Login({ name = "Herbs", class = "DRUID", profs = { ALCH } }, saved))
+        local S = MainAtMailbox(saved, { bags = Bags({ { 248705, 1 }, { 248682, 1 } }) })
+        local function count(alt, prof)
+            for _, b in ipairs(T.Buttons(S)) do
+                if b.alt == alt and b.prof == prof then return b:GetText():match("%((%d+)%)") end
+            end
+        end
+        eq(count("Tailor", "Tailoring"), "1", "fabrics crate to the tailor")
+        eq(count("Leather", "Leatherworking"), "1", "and the leatherworker (cured hides)")
+        eq(count("Herbs", "Alchemy"), "1", "herb crate to the alchemist")
+        ok(S.ns.CRATES[248705] and #S.ns.CRATES[248705] == 2, "crate data loaded")
+    end)
+
+    test("BoE green weapons and armor go to Enchanting", function()
+        local saved = T.Logout(T.Login({ name = "Dusty", class = "PRIEST", profs = { ENCH } }))
+        local bags = Bags({ { 9010, 1 }, { 9011, 1 }, { 9012, 1 }, { 9010, 1, true } })
+        local S = MainAtMailbox(saved, { bags = bags })
+        local b = T.Button(S, "Enchanting")
+        eq(b:GetText(), "Send Enchanting mats (1)", "BoE green only: not BoP, not white, not soulbound")
+        S.Slash("/mailmats", "greens off")
+        eq(T.Button(S, "Enchanting"):GetText(), "Send Enchanting mats (0)", "greens off")
+        S.Slash("/mailmats", "greens on")
+        S.Slash("/mailmats", "groups enchanting")
+        contains({ S.env.RonisMailMatsGroups.title:GetText() }, "BoE green", "groups window explains it")
+    end)
+
+    test("a green that upgrades an alt is not offered for disenchanting", function()
+        local saved = T.Logout(T.Login({ name = "Dusty", class = "PRIEST", profs = { ENCH } }))
+        saved = T.Logout(T.Login({ name = "Wiz", class = "MAGE", level = 20, equipped = { [1] = 9002 } }, saved))
+        local S = MainAtMailbox(saved, { bags = Bags({ { 9001, 1 }, { 9010, 1 } }) })
+        eq(T.Button(S, "Enchanting"):GetText(), "Send Enchanting mats (1)", "the axe, not the hood")
+        local up
+        for _, x in ipairs(T.Buttons(S)) do if x.alt == "Wiz" and x.prof == "Upgrades" then up = x end end
+        eq(up and up:GetText(), "Send upgrades (1)", "the hood goes to Wiz")
+    end)
 end

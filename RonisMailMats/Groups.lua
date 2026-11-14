@@ -81,7 +81,8 @@ function ns.RefreshGroups()
     local pages = math.max(1, math.ceil(#ids / ROWS))
     if page > pages then page = pages end
     local kind = ns.IsCustomGroup(selected) and "your group" or (ns.GroupEdited(selected) and "edited" or "built-in")
-    win.title:SetText(("%s |cff999999(%d items, %s)|r"):format(selected, #ids, kind))
+    local extra = (selected == "Enchanting" and not ns.db.noGreens) and "\n|cff1eff00+ every BoE green weapon and armor piece|r" or ""
+    win.title:SetText(("%s |cff999999(%d items, %s)|r%s"):format(selected, #ids, kind, extra))
     for i = 1, ROWS do
         local r = rows[i]
         local id = ids[(page - 1) * ROWS + i]

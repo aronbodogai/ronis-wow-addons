@@ -46,6 +46,10 @@ local ITEMS = {
     [9007] = { "Iron Shield", 2, 22, 10, "INVTYPE_SHIELD", 4, 6, 2 },
     [9008] = { "Oak Staff", 2, 22, 10, "INVTYPE_2HWEAPON", 2, 10, 2 },
     [9009] = { "Spellbook", 2, 25, 10, "INVTYPE_HOLDABLE", 4, 0, 2 },
+    [9010] = { "Green Axe", 2, 20, 15, "INVTYPE_WEAPON", 2, 0, 2 },
+    [9011] = { "Bound Green Sword", 2, 20, 15, "INVTYPE_WEAPON", 2, 7, 1 },
+    [9012] = { "White Sword", 1, 20, 15, "INVTYPE_WEAPON", 2, 7, 2 },
+    [248705] = { "Waylaid Crate: Journeyman Fabrics", 1 }, [248682] = { "Waylaid Crate: Apprentice Herbs", 1 },
 }
 
 -- Lua builtins visible to addon code (WoW runs Lua 5.1 plus a few helpers).
