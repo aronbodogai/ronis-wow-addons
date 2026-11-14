@@ -42,3 +42,15 @@ Regenerating recipes after a game patch:
     # download CSVs for SkillLineAbility, SkillLine, SpellReagents, SpellEffect from
     # https://wago.tools/db2/<Table>/csv?build=<build> into a folder, then:
     node RonisItemPedia/tools/gen_recipes.js <csv-folder> <build> > RonisItemPedia/Data/Recipes.lua
+
+## Releasing
+
+Releases are built by `.github/workflows/release-itempedia.yml` with the
+BigWigsMods packager (config: `RonisItemPedia/.pkgmeta`).
+
+1. Add a `## vX.Y.Z` section to `RonisItemPedia/CHANGELOG.md`.
+2. `git tag vX.Y.Z && git push origin vX.Y.Z`
+
+The zip always goes to GitHub Releases. CurseForge and Wago uploads need the
+`CF_API_KEY` / `WAGO_API_TOKEN` repository secrets and the
+`X-Curse-Project-ID` / `X-Wago-ID` lines in `RonisItemPedia.toc`.
