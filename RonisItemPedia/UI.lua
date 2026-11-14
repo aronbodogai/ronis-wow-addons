@@ -121,7 +121,44 @@ function Section:Reset()
     for _, t in ipairs(self.texts) do t:Hide() end
     for _, s in ipairs(self.slots) do s:Hide() end
     for _, x in ipairs(self.texs) do x:Hide() end
-    self.nt, self.ns, self.nx = 0, 0, 0
+    for _, b in ipairs(self.btns) do b:Hide() end
+    self.nt, self.ns, self.nx, self.nb = 0, 0, 0, 0
+end
+
+local function MapButton_OnEnter(self)
+    local row = self.row
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText("Show on map", 1, 1, 1)
+    if row.x then
+        GameTooltip:AddLine(string.format("Nearest: %s (%.1f, %.1f)", row.zone or "?", row.x, row.y), 0.8, 0.8, 0.8)
+    end
+    GameTooltip:AddLine("Questie pins every spawn of " .. row.name .. ".", 0.6, 0.6, 0.6, true)
+    GameTooltip:Show()
+end
+
+-- Small map-icon button used on NPC/object rows
+function Section:MapButton(row)
+    self.nb = self.nb + 1
+    local b = self.btns[self.nb]
+    if not b then
+        b = CreateFrame("Button", nil, self)
+        b:SetSize(18, 18)
+        b.icon = b:CreateTexture(nil, "ARTWORK")
+        b.icon:SetAllPoints()
+        b.icon:SetTexture("Interface\\Icons\\INV_Misc_Map_01")
+        b.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        local hl = b:CreateTexture(nil, "HIGHLIGHT")
+        hl:SetAllPoints()
+        hl:SetColorTexture(1, 1, 1, 0.25)
+        b:SetScript("OnEnter", MapButton_OnEnter)
+        b:SetScript("OnLeave", GameTooltip_Hide)
+        b:SetScript("OnClick", function(btn) ns.ShowOnMap(btn.row) end)
+        self.btns[self.nb] = b
+    end
+    b.row = row
+    b:ClearAllPoints()
+    b:Show()
+    return b
 end
 
 function Section:Text(font, r, g, b)
@@ -176,7 +213,7 @@ local function NewSection(parent)
     s.rule:SetHeight(1)
     s.rule:SetPoint("TOPLEFT", 6, -24)
     s.rule:SetPoint("TOPRIGHT", -6, -24)
-    s.texts, s.slots, s.texs = {}, {}, {}
+    s.texts, s.slots, s.texs, s.btns = {}, {}, {}, {}
     for k, v in pairs(Section) do s[k] = v end
     return s
 end
@@ -218,6 +255,11 @@ local ARROW = "Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up"
 local function MadeText(r)
     if r.max > r.min then return r.min .. "-" .. r.max end
     return r.min
+end
+
+local function DistanceText(yards)
+    if yards < 1000 then return string.format("%d yd", yards) end
+    return string.format("%.1fk yd", yards / 1000)
 end
 
 local function ChanceText(c)
@@ -344,18 +386,30 @@ function UI:SectionRows(title, rows, total, fmt, y)
     local anyChance = false
     for _, row in ipairs(rows) do
         local l = s:Text("GameFontHighlightSmall")
-        l:SetPoint("TOPLEFT", 10, -cy)
-        l:SetWidth(CW - 80)
+        l:SetPoint("TOPLEFT", 10, -cy - 2)
+        l:SetWidth(CW - 150)
         l:SetWordWrap(false)
         l:SetText(fmt(row))
+
+        local right = 10
+        if row.kind and ns.CanShowOnMap(row) then
+            local b = s:MapButton(row)
+            b:SetPoint("TOPRIGHT", -8, -cy)
+            right = 32
+        end
+        local parts = {}
         if row.chance then
             anyChance = true
-            local c = s:Text("GameFontNormalSmall", 1, 0.82, 0)
-            c:SetPoint("TOPRIGHT", -10, -cy)
-            c:SetJustifyH("RIGHT")
-            c:SetText(ChanceText(row.chance))
+            parts[#parts + 1] = "|cffffd100" .. ChanceText(row.chance) .. "|r"
         end
-        cy = cy + 16
+        if row.dist then parts[#parts + 1] = "|cff8c8c8c" .. DistanceText(row.dist) .. "|r" end
+        if #parts > 0 then
+            local r = s:Text("GameFontHighlightSmall")
+            r:SetPoint("TOPRIGHT", -right, -cy - 2)
+            r:SetJustifyH("RIGHT")
+            r:SetText(table.concat(parts, "   "))
+        end
+        cy = cy + 20
     end
     if total > #rows then
         local more = s:Text("GameFontDisableSmall")

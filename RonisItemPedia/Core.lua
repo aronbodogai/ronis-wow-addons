@@ -174,11 +174,15 @@ f:SetScript("OnEvent", function(_, event, arg1)
         if ns.UI and ns.UI.OnItemInfo then ns.UI:OnItemInfo(arg1) end
     elseif event == "BAG_UPDATE_DELAYED" then
         if ns.UI and ns.UI.OnDataChanged then ns.UI:OnDataChanged(false) end
+    elseif event == "ZONE_CHANGED_NEW_AREA" then
+        -- distances to vendors/mobs changed a lot
+        if ns.UI and ns.UI.OnDataChanged then ns.UI:OnDataChanged(true) end
     end
 end)
 
 for _, e in ipairs({
     "ADDON_LOADED", "PLAYER_LOGIN", "GLOBAL_MOUSE_DOWN", "GET_ITEM_INFO_RECEIVED", "BAG_UPDATE_DELAYED",
+    "ZONE_CHANGED_NEW_AREA",
 }) do
     pcall(f.RegisterEvent, f, e) -- tolerate events this client does not know
 end

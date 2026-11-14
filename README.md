@@ -16,8 +16,10 @@ A Factoriopedia-style item window.
   - **Created by**: every recipe that makes the item (reagents -> product)
   - **Teaches**: for patterns/plans/formulas, the recipe they teach
   - **Used in**: every recipe that uses the item, grouped by profession
-  - **Dropped by**: NPCs with rank, level, zone and drop chance (when known)
-  - **Contained in**, **Gathered from**, **Sold by**, **Quest reward**
+  - **Dropped by**: NPCs with rank, level, zone, distance and drop chance (when known)
+  - **Contained in**, **Gathered from**, **Sold by** (nearest first), **Quest reward**
+  - Map button on NPC/object rows: Questie pins every spawn and the world
+    map opens on the nearest one
   - **Properties** (quality, type, ilvl, stack size, vendor price, Auctionator
     price, how many you own) and the full tooltip **Description**
 - Every icon is clickable; back/forward buttons (or mouse buttons 4/5) walk
