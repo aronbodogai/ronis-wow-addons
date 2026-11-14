@@ -102,6 +102,9 @@ Mails reagents to the alt who can use them.
   group of your own (blue), which you can give to recipients like any
   other; **Delete group** removes it and takes it off every recipient.
   Drag the minimap button to move it; `/mailmats minimap` hides or shows it.
+- Windows have a solid background. Like the world map, the mailbox panel
+  and the Groups window fade while you move (unless the mouse is over
+  them) and turn solid again when you stop.
 
 "Mats" for a profession are all items used as a reagent by any of its
 recipes (`Data/Reagents.lua`, generated from RonisItemPedia's recipe database

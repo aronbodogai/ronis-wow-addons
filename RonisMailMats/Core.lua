@@ -35,6 +35,42 @@ local function SlotInfo(bag, slot)
     return count, locked, bound
 end
 
+---------------------------------------------------------------------------
+-- Window look: a solid background, and (for the top-level windows) the
+-- world map's behaviour: while you move and the mouse is not over the
+-- window it fades so you can see past it; standing still or hovering it, it
+-- is solid again.
+---------------------------------------------------------------------------
+local FADED, FADE_SPEED = 0.35, 4 -- alpha while moving; alpha change per second
+
+local function PlayerMoving()
+    if IsPlayerMoving then return IsPlayerMoving() and true or false end
+    return (GetUnitSpeed and (GetUnitSpeed("player") or 0) > 0) or false
+end
+ns.PlayerMoving = PlayerMoving
+
+function ns.StyleWindow(frame, fade)
+    frame:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = false, edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 },
+    })
+    frame:SetBackdropColor(0.06, 0.06, 0.07, 1)
+    frame:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
+    if not fade then return end
+    frame.RonisMailMatsAlpha = 1
+    frame:HookScript("OnUpdate", function(self, elapsed)
+        local target = (PlayerMoving() and not self:IsMouseOver()) and FADED or 1
+        local a = self.RonisMailMatsAlpha
+        if a == target then return end
+        local step = (elapsed or 0) * FADE_SPEED
+        if a < target then a = math.min(target, a + step) else a = math.max(target, a - step) end
+        self.RonisMailMatsAlpha = a
+        self:SetAlpha(a)
+    end)
+end
+
 function ns.ItemID(ref)
     if type(ref) == "number" then return ref end
     if type(ref) ~= "string" then return nil end

@@ -740,4 +740,30 @@ return function(T)
         local S2 = MainAtMailbox(T.Logout(S), { profs = { SMITH, FIRST_AID } })
         eq(T.Button(S2, "Tailoring"):GetText(), "Send Tailoring mats (3)", "choice kept after relog")
     end)
+
+    -----------------------------------------------------------------------
+    -- Window look: solid, fades only while moving (like the world map)
+    -----------------------------------------------------------------------
+    test("windows are solid and fade while moving unless hovered", function()
+        local S = MainAtMailbox(nil)
+        S.Slash("/mailmats", "groups")
+        local win = S.env.RonisMailMatsGroups
+        eq(win._backdrop.bgFile, "Interface\\Buttons\\WHITE8X8", "solid background")
+        local tick = function() for _ = 1, 10 do win._scripts.OnUpdate(win, 0.1) end end
+        tick()
+        eq(win:GetAlpha(), 1, "standing still: solid")
+        S.moving = true
+        tick()
+        ok(win:GetAlpha() < 0.5, "moving: faded, alpha " .. tostring(win:GetAlpha()))
+        win._mouseOver = true
+        tick()
+        eq(win:GetAlpha(), 1, "moving but hovered: solid")
+        win._mouseOver = false
+        tick()
+        S.moving = false
+        tick()
+        eq(win:GetAlpha(), 1, "stopped: solid again")
+        local panel = T.Panel(S)
+        ok(panel._scripts.OnUpdate, "mailbox panel fades too")
+    end)
 end

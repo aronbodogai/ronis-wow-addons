@@ -136,13 +136,7 @@ local function Build()
     win = CreateFrame("Frame", "RonisMailMatsGroups", UIParent, "BackdropTemplate")
     win:SetSize(W, H)
     win:SetPoint("CENTER")
-    win:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 16, edgeSize = 16,
-        insets = { left = 4, right = 4, top = 4, bottom = 4 },
-    })
-    win:SetBackdropColor(0, 0, 0, 0.95)
+    ns.StyleWindow(win, true)
     win:SetFrameStrata("DIALOG")
     win:EnableMouse(true)
     win:SetMovable(true)

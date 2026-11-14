@@ -170,7 +170,9 @@ function mock.NewSession(opts)
     function Region:GetHeight() return self._h or 0 end
     function Region:GetParent() return self._parent end
     function Region:GetName() return self._name end
-    function Region:SetAlpha() end
+    function Region:SetAlpha(a) self._alpha = a end
+    function Region:GetAlpha() return self._alpha or 1 end
+    function Region:IsMouseOver() return self._mouseOver or false end
     function Region:GetObjectType() return self._type end
 
     local FontStringMethods = {
@@ -490,6 +492,8 @@ function mock.NewSession(opts)
         end,
     }
     env.CursorHasItem = function() return S.cursor ~= nil end
+    S.moving = false
+    env.IsPlayerMoving = function() return S.moving end
     env.GetCursorInfo = function()
         if S.cursor then return "item", S.cursor.item.id end
     end

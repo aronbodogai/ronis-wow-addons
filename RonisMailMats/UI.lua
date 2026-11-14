@@ -221,13 +221,7 @@ function ns.InitUI()
     panel = CreateFrame("Frame", "RonisMailMatsPanel", MailFrame, "BackdropTemplate")
     panel:SetWidth(WIDTH)
     panel:SetPoint("TOPLEFT", MailFrame, "TOPRIGHT", 2, 0)
-    panel:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 16, edgeSize = 16,
-        insets = { left = 4, right = 4, top = 4, bottom = 4 },
-    })
-    panel:SetBackdropColor(0, 0, 0, 0.9)
+    ns.StyleWindow(panel, true)
     panel:EnableMouse(true)
 
     title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -297,13 +291,7 @@ local function BuildEditor()
     editor = CreateFrame("Frame", "RonisMailMatsEditor", panel, "BackdropTemplate")
     editor:SetWidth(EDIT_W)
     editor:SetPoint("TOPLEFT", panel, "TOPRIGHT", 2, 0)
-    editor:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 16, edgeSize = 16,
-        insets = { left = 4, right = 4, top = 4, bottom = 4 },
-    })
-    editor:SetBackdropColor(0, 0, 0, 0.95)
+    ns.StyleWindow(editor)
     editor:EnableMouse(true)
 
     local t = editor:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -497,13 +485,7 @@ function ns.ToggleKeepFrame()
         keepFrame = CreateFrame("Frame", "RonisMailMatsKeep", panel, "BackdropTemplate")
         keepFrame:SetWidth(170)
         keepFrame:SetPoint("BOTTOMLEFT", panel, "BOTTOMRIGHT", 2, 0)
-        keepFrame:SetBackdrop({
-            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-            tile = true, tileSize = 16, edgeSize = 16,
-            insets = { left = 4, right = 4, top = 4, bottom = 4 },
-        })
-        keepFrame:SetBackdropColor(0, 0, 0, 0.95)
+        ns.StyleWindow(keepFrame)
         keepFrame:EnableMouse(true)
         local t = keepFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         t:SetPoint("TOPLEFT", PAD, -PAD)
