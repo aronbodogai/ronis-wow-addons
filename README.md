@@ -16,6 +16,7 @@ A Factoriopedia-style item window.
   - **Created by**: every recipe that makes the item (reagents -> product)
   - **Teaches**: for patterns/plans/formulas, the recipe they teach
   - **Used in**: every recipe that uses the item, grouped by profession
+  - **Required for quests**: quests needing the item, with level, zone, giver and map button
   - **Dropped by**: NPCs with rank, level, zone, distance and drop chance (when known)
   - **Contained in**, **Gathered from**, **Sold by** (nearest first), **Quest reward**
   - Map button on NPC/object rows: Questie pins every spawn and the world

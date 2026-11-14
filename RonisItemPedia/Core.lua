@@ -161,6 +161,7 @@ f:SetScript("OnEvent", function(_, event, arg1)
         BuildIndex()
     elseif event == "PLAYER_LOGIN" then
         InstallHooks()
+        C_Timer.After(5, function() pcall(ns.StartQuestScan) end) -- let login settle first
     elseif event == "GLOBAL_MOUSE_DOWN" then
         -- Anything that shows an item tooltip (also covers bag addons like Bagnon,
         -- quest rewards, auction house rows...). Action buttons are skipped because

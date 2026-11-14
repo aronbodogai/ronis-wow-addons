@@ -165,6 +165,103 @@ local function Trim(rows)
     return total
 end
 
+---------------------------------------------------------------------------
+-- Quests that need an item (item objectives + required source items).
+-- QuestieDB has no item -> quest link for this, so every quest is scanned once,
+-- spread over frames after login to avoid a hitch.
+---------------------------------------------------------------------------
+local questsByItem       -- [itemID] = { questID, ... } once ready
+local QUESTS_PER_FRAME = 250
+
+function ns.QuestIndexReady()
+    return questsByItem ~= nil
+end
+
+function ns.StartQuestScan()
+    local qdb = DB("QuestDB")
+    if questsByItem or ns.questScanning or not qdb or type(qdb.GetAllIds) ~= "function" then return end
+    local ok, ids = pcall(qdb.GetAllIds)
+    if not ok or type(ids) ~= "table" then return end
+    ns.questScanning = true
+    local index, i = {}, 1
+    local function add(item, q)
+        if type(item) ~= "number" then return end
+        local t = index[item]
+        if not t then t = {}; index[item] = t end
+        if t[#t] ~= q then t[#t + 1] = q end
+    end
+    local ticker
+    ticker = C_Timer.NewTicker(0, function()
+        local stop = math.min(i + QUESTS_PER_FRAME - 1, #ids)
+        for k = i, stop do
+            local q = ids[k]
+            local obj = Get("QuestDB", q, "objectives")
+            for _, o in ipairs(List(obj and obj[3])) do
+                if type(o) == "table" then add(o[1], q) end
+            end
+            for _, item in ipairs(List(Get("QuestDB", q, "requiredSourceItems"))) do add(item, q) end
+        end
+        i = stop + 1
+        if i > #ids then
+            ticker:Cancel()
+            questsByItem, ns.questScanning = index, false
+            if ns.UI and ns.UI.OnDataChanged then ns.UI:OnDataChanged(true) end
+        end
+    end)
+end
+
+local band = bit and bit.band
+local playerRaceBit
+local function AvailableToPlayer(q)
+    local mask = Get("QuestDB", q, "requiredRaces")
+    if type(mask) ~= "number" or mask == 0 or not band then return true end
+    if not playerRaceBit then
+        local _, _, raceID = UnitRace("player")
+        playerRaceBit = raceID and 2 ^ (raceID - 1) or 0
+    end
+    return playerRaceBit == 0 or band(mask, playerRaceBit) ~= 0
+end
+
+local IsQuestDone = (C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted) or IsQuestFlaggedCompleted
+
+local function QuestRow(q, player)
+    local name = Get("QuestDB", q, "name")
+    if not name then return nil end
+    local row = {
+        quest = q,
+        name = name,
+        level = Get("QuestDB", q, "questLevel"),
+        reqLevel = Get("QuestDB", q, "requiredLevel"),
+    }
+    local zoneOrSort = Get("QuestDB", q, "zoneOrSort")
+    if type(zoneOrSort) == "number" and zoneOrSort > 0 then row.questZone = ZoneName(zoneOrSort) end
+    if IsQuestDone then
+        local ok, done = pcall(IsQuestDone, q)
+        row.done = ok and done or nil
+    end
+    -- quest giver: first NPC, else first object (item-started quests have no map spot)
+    local starters = List(Get("QuestDB", q, "startedBy"))
+    local npc, obj = List(starters[1])[1], List(starters[2])[1]
+    if npc and Get("NpcDB", npc, "name") then
+        row.kind, row.id, row.pinName = "npc", npc, Get("NpcDB", npc, "name")
+        Locate(row, Get("NpcDB", npc, "spawns"), player)
+    elseif obj and Get("ObjectDB", obj, "name") then
+        row.kind, row.id, row.pinName = "object", obj, Get("ObjectDB", obj, "name")
+        Locate(row, Get("ObjectDB", obj, "spawns"), player)
+    end
+    row.zone = row.questZone or row.zone
+    return row
+end
+
+local function SortQuests(rows)
+    table.sort(rows, function(a, b)
+        if (a.done and 1 or 0) ~= (b.done and 1 or 0) then return not a.done end
+        local la, lb = tonumber(a.level) or 0, tonumber(b.level) or 0
+        if la ~= lb then return la < lb end
+        return a.name < b.name
+    end)
+end
+
 -- Returns { drops = {rows}, dropsTotal, objects = {rows}, objectsTotal,
 --           containers = {itemIDs}, vendors = {rows}, vendorsTotal, quests = {rows},
 --           teaches = spellID }
@@ -223,6 +320,20 @@ function ns.GetSources(itemID)
         end
     end
 
+    out.requiredFor = {}
+    if questsByItem then
+        for _, q in ipairs(questsByItem[itemID] or {}) do
+            if AvailableToPlayer(q) then
+                local row = QuestRow(q, player)
+                if row then out.requiredFor[#out.requiredFor + 1] = row end
+            end
+        end
+        SortQuests(out.requiredFor)
+        out.requiredForTotal = Trim(out.requiredFor)
+    else
+        out.questsScanning = ns.questScanning
+    end
+
     local teaches = Get("ItemDB", itemID, "teachesSpell")
     if type(teaches) == "number" and teaches > 0 then out.teaches = teaches end
     return out
@@ -258,10 +369,12 @@ function ns.ShowOnMap(row)
     end
 
     if row.x then
-        ns.Print(string.format("%s - %s (%.1f, %.1f)", row.name, row.zone or "?", row.x, row.y))
+        local label = row.pinName or row.name
+        if row.quest then label = row.name .. ": " .. label end
+        ns.Print(string.format("%s - %s (%.1f, %.1f)", label, row.zone or "?", row.x, row.y))
     end
 end
 
 function ns.CanShowOnMap(row)
-    return row.mapID ~= nil or (row.kind and Module("QuestieMap") ~= nil)
+    return row.kind ~= nil and (row.mapID ~= nil or Module("QuestieMap") ~= nil)
 end

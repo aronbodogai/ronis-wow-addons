@@ -1,5 +1,13 @@
 # Roni's ItemPedia
 
+## v0.4.0
+
+- New **Required for quests** section: every quest that asks for the item,
+  with quest level, required level, zone and quest giver. Quests your
+  faction cannot take are hidden, ones you already finished are greyed out
+  and listed last.
+- Map button on each quest: pins the quest giver and opens the world map.
+
 ## v0.3.0
 
 First public release.
