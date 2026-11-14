@@ -18,8 +18,10 @@ manual-changelog:
   filename: RonisItemPedia/CHANGELOG.md
   markup-type: markdown
 
-# Repo files and developer tools players do not need
+# Repo files, developer tools and the other addons in this repository
+# (each has its own release)
 ignore:
   - README.md
   - LICENSE
   - RonisItemPedia/tools
+  - RonisMailMats

@@ -1,5 +1,11 @@
 # Roni's ItemPedia
 
+## v0.4.1
+
+- Packaging fix: the v0.4.0 download also contained an unrelated addon
+  folder (RonisMailMats) inside the ItemPedia folder. It was never loaded by
+  the game; this release removes it.
+
 ## v0.4.0
 
 - New **Required for quests** section: every quest that asks for the item,
