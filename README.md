@@ -16,6 +16,7 @@ A Factoriopedia-style item window.
   - **Created by**: every recipe that makes the item (reagents -> product)
   - **Teaches**: for patterns/plans/formulas, the recipe they teach
   - **Used in**: every recipe that uses the item, grouped by profession
+  - **Required for quests**: quests needing the item, with level, zone, giver and map button
   - **Dropped by**: NPCs with rank, level, zone, distance and drop chance (when known)
   - **Contained in**, **Gathered from**, **Sold by** (nearest first), **Quest reward**
   - Map button on NPC/object rows: Questie pins every spawn and the world
@@ -70,3 +71,15 @@ items out of drafts.
 Regenerating after the recipe database changes:
 
     node RonisMailMats/tools/gen_reagents.js > RonisMailMats/Data/Reagents.lua
+
+## Releasing
+
+Releases are built by `.github/workflows/release-itempedia.yml` with the
+BigWigsMods packager (config: `RonisItemPedia/.pkgmeta`).
+
+1. Add a `## vX.Y.Z` section to `RonisItemPedia/CHANGELOG.md`.
+2. `git tag vX.Y.Z && git push origin vX.Y.Z`
+
+The zip always goes to GitHub Releases. CurseForge and Wago uploads need the
+`CF_API_KEY` / `WAGO_API_TOKEN` repository secrets and the
+`X-Curse-Project-ID` / `X-Wago-ID` lines in `RonisItemPedia.toc`.

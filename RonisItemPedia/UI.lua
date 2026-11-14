@@ -132,7 +132,10 @@ local function MapButton_OnEnter(self)
     if row.x then
         GameTooltip:AddLine(string.format("Nearest: %s (%.1f, %.1f)", row.zone or "?", row.x, row.y), 0.8, 0.8, 0.8)
     end
-    GameTooltip:AddLine("Questie pins every spawn of " .. row.name .. ".", 0.6, 0.6, 0.6, true)
+    if row.quest then
+        GameTooltip:AddLine("Quest giver: " .. (row.pinName or "?"), 1, 0.82, 0)
+    end
+    GameTooltip:AddLine("Questie pins every spawn of " .. (row.pinName or row.name) .. ".", 0.6, 0.6, 0.6, true)
     GameTooltip:Show()
 end
 
@@ -376,6 +379,29 @@ end
 local function QuestText(row)
     local lvl = (type(row.level) == "number" and row.level > 0) and ("|cff8c8c8c[" .. row.level .. "]|r ") or ""
     return lvl .. "|cffffd100" .. row.name .. "|r"
+end
+
+-- "[24] Quest name  req 20 - Zone - Giver", greyed out when already done
+local function QuestReqText(row)
+    local lvl = (type(row.level) == "number" and row.level > 0) and ("[" .. row.level .. "] ") or ""
+    local meta = {}
+    if type(row.reqLevel) == "number" and row.reqLevel > 0 then meta[#meta + 1] = "req " .. row.reqLevel end
+    if row.zone then meta[#meta + 1] = row.zone end
+    if row.pinName then meta[#meta + 1] = row.pinName end
+    local tail = #meta > 0 and ("  |cff8c8c8c" .. table.concat(meta, "  -  ") .. "|r") or ""
+    if row.done then
+        return "|cff7f7f7f" .. lvl .. row.name .. " (done)|r" .. tail
+    end
+    return "|cff8c8c8c" .. lvl .. "|r|cffffd100" .. row.name .. "|r" .. tail
+end
+
+function UI:SectionQuestsScanning(src, y)
+    if not src.questsScanning then return y end
+    local s = self:AcquireSection("Required for quests", y)
+    local t = s:Text("GameFontDisableSmall")
+    t:SetPoint("TOPLEFT", 10, -SECTION_TOP)
+    t:SetText("Scanning the quest database...")
+    return Finish(s, SECTION_TOP + 16, y)
 end
 
 function UI:SectionRows(title, rows, total, fmt, y)
@@ -878,6 +904,8 @@ function UI:Render()
     y = self:SectionCreatedBy(id, y)
     y = self:SectionTeaches(src, id, y)
     y = self:SectionUsedIn(id, y)
+    y = self:SectionRows("Required for quests", src.requiredFor or {}, src.requiredForTotal, QuestReqText, y)
+    y = self:SectionQuestsScanning(src, y)
     y = self:SectionRows("Dropped by", src.drops, src.dropsTotal, NpcText, y)
     y = self:SectionContainers(src, y)
     y = self:SectionRows("Gathered from", src.objects, src.objectsTotal, ObjectText, y)
