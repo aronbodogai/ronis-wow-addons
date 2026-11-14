@@ -6,7 +6,7 @@ local PAD = 10
 local GetItemInfo = GetItemInfo or (C_Item and C_Item.GetItemInfo)
 local GetItemIcon = GetItemIcon or (C_Item and C_Item.GetItemIconByID)
 
-local panel, title, keepBox, emptyText
+local panel, title, keepBox, emptyText, addButton, editor
 local headers, buttons = {}, {}
 
 local function ClassColor(class)
@@ -35,8 +35,7 @@ local function ButtonTooltip(self)
     GameTooltip:AddLine(("%s for %s"):format(what:gsub("^%l", string.upper), self.alt))
     local stacks, totals, ids = ns.StacksFor(self.prof, self.alt)
     local alt = ns.db.chars[ns.realm][self.alt]
-    local skill = alt and alt.profs and alt.profs[self.prof]
-    local myRank = skill and skill.rank or 0
+    local skill = alt and alt.profs and type(self.prof) == "string" and alt.profs[self.prof]
     if #ids == 0 then
         GameTooltip:AddLine("Nothing in your bags.", 0.6, 0.6, 0.6)
     else
@@ -50,7 +49,7 @@ local function ButtonTooltip(self)
             local icon = GetItemIcon(id)
             local label = (icon and ("|T" .. icon .. ":14|t ") or "") .. (name or ("item " .. id))
             local need = ns.SKILL_RANK[id]
-            if need and need > myRank then
+            if need and skill and need > (skill.rank or 0) then
                 -- a lockbox or scroll the alt cannot open yet
                 label = label .. (" |cffff6060(needs %d)|r"):format(need)
             end
@@ -60,6 +59,9 @@ local function ButtonTooltip(self)
         GameTooltip:AddLine(("%d stack(s); one mail holds %d."):format(#stacks, ATTACHMENTS_MAX_SEND or 12), 0.6, 0.6, 0.6)
         GameTooltip:AddLine("Click to draft the mail. Nothing is sent until you press Send.", 0.6, 0.6, 0.6)
     end
+    if self.target then
+        GameTooltip:AddLine("Right-click to change what " .. self.alt .. " gets.", 0.6, 0.6, 0.6)
+    end
     GameTooltip:Show()
 end
 
@@ -68,7 +70,14 @@ local function GetButton(i)
     if not b then
         b = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
         b:SetSize(WIDTH - 2 * PAD - 8, 22)
-        b:SetScript("OnClick", function(self) ns.Draft(self.alt, self.prof) end)
+        b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        b:SetScript("OnClick", function(self, button)
+            if button == "RightButton" then
+                if self.target then ns.OpenEditor(self.alt) end
+                return
+            end
+            ns.Draft(self.alt, self.prof)
+        end)
         b:SetScript("OnEnter", ButtonTooltip)
         b:SetScript("OnLeave", function() GameTooltip:Hide() end)
         buttons[i] = b
@@ -102,7 +111,7 @@ function ns.Refresh()
             for _, p in ipairs(crafts) do
                 nb = nb + 1
                 local b = GetButton(nb)
-                b.alt, b.prof = alt, p
+                b.alt, b.prof, b.target = alt, p, false
                 local stacks = ns.StacksFor(p, alt)
                 b:SetText(("Send %s (%d)"):format(ns.What(p), #stacks))
                 b:SetEnabled(#stacks > 0)
@@ -113,6 +122,26 @@ function ns.Refresh()
         end
     end
 
+    -- other recipients: one button for everything they want
+    for _, name in ipairs(ns.Targets()) do
+        local cats = ns.TargetCats(name)
+        nh = nh + 1
+        local h = GetHeader(nh)
+        h:SetPoint("TOPLEFT", PAD, y)
+        local names = {}
+        for _, p in ipairs(cats) do names[#names + 1] = p end
+        h:SetText(("|cffffd100%s|r |cff999999%s|r"):format(name, table.concat(names, ", ")))
+        y = y - h:GetStringHeight() - 4
+        nb = nb + 1
+        local b = GetButton(nb)
+        b.alt, b.prof, b.target = name, cats, true
+        local stacks = ns.StacksFor(cats)
+        b:SetText(("Send all to %s (%d)"):format(name, #stacks))
+        b:SetEnabled(#stacks > 0)
+        b:SetPoint("TOPLEFT", PAD + 8, y)
+        y = y - 30
+    end
+
     if nh == 0 then
         emptyText:Show()
         emptyText:SetPoint("TOPLEFT", PAD, y)
@@ -120,6 +149,9 @@ function ns.Refresh()
     else
         emptyText:Hide()
     end
+
+    addButton:SetPoint("TOPLEFT", PAD, y)
+    y = y - 26
 
     keepBox:SetPoint("TOPLEFT", PAD - 4, y)
     keepBox:SetChecked(ns.db.keepOwn)
@@ -168,6 +200,11 @@ function ns.InitUI()
     end)
     keepBox:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
+    addButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    addButton:SetSize(WIDTH - 2 * PAD, 22)
+    addButton:SetText("Add a recipient...")
+    addButton:SetScript("OnClick", function() ns.OpenEditor(nil) end)
+
     panel:SetScript("OnShow", ns.Refresh)
 
     local ev = CreateFrame("Frame")
@@ -185,4 +222,97 @@ function ns.InitUI()
             ns.Refresh()
         end)
     end)
+end
+
+---------------------------------------------------------------------------
+-- Recipient editor: a name and the categories they get
+---------------------------------------------------------------------------
+local EDIT_W = 200
+
+local function BuildEditor()
+    editor = CreateFrame("Frame", "RonisMailMatsEditor", panel, "BackdropTemplate")
+    editor:SetWidth(EDIT_W)
+    editor:SetPoint("TOPLEFT", panel, "TOPRIGHT", 2, 0)
+    editor:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 },
+    })
+    editor:SetBackdropColor(0, 0, 0, 0.95)
+    editor:EnableMouse(true)
+
+    local t = editor:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    t:SetPoint("TOPLEFT", PAD, -PAD)
+    t:SetText("Recipient")
+
+    local nameBox = CreateFrame("EditBox", nil, editor, "InputBoxTemplate")
+    nameBox:SetSize(EDIT_W - 2 * PAD - 6, 20)
+    nameBox:SetPoint("TOPLEFT", PAD + 6, -30)
+    nameBox:SetAutoFocus(false)
+    nameBox:SetMaxLetters(48)
+    nameBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    editor.nameBox = nameBox
+
+    local hint = editor:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    hint:SetPoint("TOPLEFT", PAD, -56)
+    hint:SetText("Sends one mail with all of:")
+
+    editor.boxes = {}
+    local y = -72
+    for _, p in ipairs(ns.Categories()) do
+        local cb = CreateFrame("CheckButton", nil, editor, "UICheckButtonTemplate")
+        cb:SetSize(22, 22)
+        cb:SetPoint("TOPLEFT", PAD - 4, y)
+        cb.label = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        cb.label:SetPoint("LEFT", cb, "RIGHT", 2, 0)
+        cb.label:SetText(p .. (p == "Lockpicking" and " (lockboxes)" or p == "Comprehension" and " (scrolls)" or ""))
+        cb.cat = p
+        editor.boxes[#editor.boxes + 1] = cb
+        y = y - 20
+    end
+    y = y - 6
+
+    local function Btn(text, x, fn)
+        local b = CreateFrame("Button", nil, editor, "UIPanelButtonTemplate")
+        b:SetSize((EDIT_W - 2 * PAD - 8) / 3, 22)
+        b:SetPoint("TOPLEFT", x, y)
+        b:SetText(text)
+        b:SetScript("OnClick", fn)
+        return b
+    end
+    local w = (EDIT_W - 2 * PAD - 8) / 3
+    editor.save = Btn("Save", PAD, function()
+        local cats = {}
+        for _, cb in ipairs(editor.boxes) do
+            if cb:GetChecked() then cats[#cats + 1] = cb.cat end
+        end
+        local name = strtrim(nameBox:GetText() or "")
+        if name == "" or #cats == 0 then
+            ns.Print("Enter a name and tick at least one category.")
+            return
+        end
+        if editor.editing and editor.editing:lower() ~= name:lower() then ns.SetTarget(editor.editing, nil) end
+        ns.SetTarget(name, cats)
+        editor:Hide()
+    end)
+    editor.delete = Btn("Delete", PAD + w + 4, function()
+        if editor.editing then ns.SetTarget(editor.editing, nil) end
+        editor:Hide()
+    end)
+    editor.cancel = Btn("Cancel", PAD + 2 * (w + 4), function() editor:Hide() end)
+    editor:SetHeight(-y + 22 + PAD)
+end
+
+-- Opens the editor for a recipient, or empty for a new one.
+function ns.OpenEditor(name)
+    if not panel then return end
+    if not editor then BuildEditor() end
+    editor.editing = name or false
+    editor.nameBox:SetText(name or "")
+    local want = {}
+    for _, p in ipairs(name and ns.TargetCats(name) or {}) do want[p] = true end
+    for _, cb in ipairs(editor.boxes) do cb:SetChecked(want[cb.cat] or false) end
+    editor.delete:SetEnabled(name ~= nil)
+    editor:Show()
 end

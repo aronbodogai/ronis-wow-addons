@@ -390,4 +390,77 @@ return function(T)
         ok(not (cap.RonisMailMatsIcon and cap.RonisMailMatsIcon:IsShown()), "no icon on the leather cap")
         ok(not (bound.RonisMailMatsIcon and bound.RonisMailMatsIcon:IsShown()), "no icon on a soulbound item")
     end)
+
+    -----------------------------------------------------------------------
+    -- Other recipients (friends, anyone): one button for several categories
+    -----------------------------------------------------------------------
+    local function TargetButton(S, name)
+        return T.Button(S, "Send all to " .. name)
+    end
+
+    test("/mailmats target saves a recipient with several categories", function()
+        local S = MainAtMailbox(nil, { bags = Bags(LOCKBOX_BAGS) })
+        S.Slash("/mailmats", "target bob tailoring, scrolls")
+        local t = S.env.RonisMailMatsDB.targets[REALM].Bob
+        eq(t and table.concat(t.cats, ","), "Tailoring,Comprehension", "stored in panel order")
+        contains(S.printLog, "Bob will get Tailoring mats, scrolls", "confirmation")
+        S.Slash("/mailmats", "target bob nonsense")
+        contains(S.printLog, "Unknown category 'nonsense'", "bad category")
+        eq(table.concat(S.env.RonisMailMatsDB.targets[REALM].Bob.cats, ","), "Tailoring,Comprehension", "unchanged")
+    end)
+
+    test("one button drafts everything the recipient wants in one mail", function()
+        local S = MainAtMailbox(nil, { bags = Bags(LOCKBOX_BAGS) })
+        S.Slash("/mailmats", "target Bob tailoring, comprehension")
+        local b = TargetButton(S, "Bob")
+        eq(b:GetText(), "Send all to Bob (3)", "linen + 2 scroll stacks, no lockboxes")
+        b:Click()
+        S.Advance(1)
+        local ids = {}
+        for _, a in ipairs(S.Attachments()) do ids[#ids + 1] = a.id end
+        table.sort(ids)
+        eq(table.concat(ids, ","), "2589,211780,213543", "attached")
+        eq(S.env.SendMailNameEditBox:GetText(), "Bob", "recipient")
+        eq(S.env.SendMailSubjectEditBox:GetText(), "Tailoring mats, scrolls", "subject")
+        eq(#S.sent, 0, "nothing sent")
+    end)
+
+    test("recipients survive a relog and can be removed", function()
+        local S = MainAtMailbox(nil, { bags = Bags(LOCKBOX_BAGS) })
+        S.Slash("/mailmats", "target Bob lockpicking")
+        local S2 = MainAtMailbox(T.Logout(S), { bags = Bags(LOCKBOX_BAGS) })
+        eq(TargetButton(S2, "Bob"):GetText(), "Send all to Bob (3)", "lockboxes after relog")
+        S2.Slash("/mailmats", "untarget bob")
+        for _, x in ipairs(T.Buttons(S2)) do
+            ok(not (x._text or ""):find("Send all to"), "removed: " .. tostring(x._text))
+        end
+    end)
+
+    test("the editor adds, changes and deletes a recipient", function()
+        local S = MainAtMailbox(nil, { bags = Bags(LOCKBOX_BAGS) })
+        for _, f in ipairs(S.frames) do
+            if f._type == "Button" and (f._text or ""):find("Add a recipient") then f:Click() end
+        end
+        local ed = S.env.RonisMailMatsEditor
+        ok(ed and ed:IsShown(), "editor open")
+        ed.nameBox:SetText("Friend")
+        for _, cb in ipairs(ed.boxes) do
+            if cb.cat == "Comprehension" then cb:Click() end
+        end
+        ed.save:Click()
+        ok(not ed:IsShown(), "closed on save")
+        eq(TargetButton(S, "Friend"):GetText(), "Send all to Friend (2)", "scrolls")
+        -- right-click the button to edit: boxes come back ticked
+        TargetButton(S, "Friend")._scripts.OnClick(TargetButton(S, "Friend"), "RightButton")
+        ok(ed:IsShown(), "editor reopened")
+        local ticked = {}
+        for _, cb in ipairs(ed.boxes) do if cb:GetChecked() then ticked[#ticked + 1] = cb.cat end end
+        eq(table.concat(ticked, ","), "Comprehension", "prefilled")
+        for _, cb in ipairs(ed.boxes) do if cb.cat == "Tailoring" then cb:Click() end end
+        ed.save:Click()
+        eq(TargetButton(S, "Friend"):GetText(), "Send all to Friend (3)", "scrolls and cloth")
+        TargetButton(S, "Friend")._scripts.OnClick(TargetButton(S, "Friend"), "RightButton")
+        ed.delete:Click()
+        eq(S.env.RonisMailMatsDB.targets[REALM].Friend, nil, "deleted")
+    end)
 end

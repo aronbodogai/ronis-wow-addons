@@ -74,6 +74,11 @@ ns.CRAFT_ORDER = {
 -- What a button sends ("Send <what> (N)"); professions default to "<prof> mats".
 local WHAT = { Lockpicking = "lockboxes", Comprehension = "scrolls", Upgrades = "upgrades" }
 function ns.What(prof)
+    if type(prof) == "table" then -- a recipient's categories
+        local parts = {}
+        for _, p in ipairs(prof) do parts[#parts + 1] = WHAT[p] or (p .. " mats") end
+        return #parts > 0 and table.concat(parts, ", ") or "nothing"
+    end
     return WHAT[prof] or (prof .. " mats")
 end
 
@@ -140,11 +145,68 @@ local function InitDB()
     db.chars = db.chars or {}    -- [realm][name] = { class, faction, level, profs = {[name]=rank} }
     db.ignore = db.ignore or {}  -- [itemID] = true: never put in a draft
     if db.keepOwn == nil then db.keepOwn = true end
+    db.targets = db.targets or {} -- [realm][name] = { cats = { "Tailoring", ... } }: friends, guildies, anyone
     ns.db = db
     ns.realm = GetRealmName()
     ns.me = UnitName("player")
     ns.faction = UnitFactionGroup("player")
     db.chars[ns.realm] = db.chars[ns.realm] or {}
+    db.targets[ns.realm] = db.targets[ns.realm] or {}
+end
+
+---------------------------------------------------------------------------
+-- Other recipients: anyone (friend, guildie, an alt on another account) with
+-- the categories they want. One button sends all of them in one mail.
+---------------------------------------------------------------------------
+-- Categories a recipient can want: every profession and skill, in panel order.
+function ns.Categories() return ns.CRAFT_ORDER end
+
+-- Category from user input: "tailoring", "Tailoring mats", "scrolls", ...
+function ns.FindCategory(text)
+    text = strtrim(text or ""):lower()
+    if text == "" then return nil end
+    for _, p in ipairs(ns.CRAFT_ORDER) do
+        if p:lower() == text or ns.What(p):lower() == text then return p end
+    end
+    for _, p in ipairs(ns.CRAFT_ORDER) do -- unique prefix: "tail", "lock"
+        if p:lower():sub(1, #text) == text then return p end
+    end
+end
+
+local function NormalName(name)
+    name = strtrim(name or "")
+    if name == "" then return nil end
+    return name:sub(1, 1):upper() .. name:sub(2)
+end
+
+-- Sets (or with no categories, removes) a recipient. Returns the stored name.
+function ns.SetTarget(name, cats)
+    name = NormalName(name)
+    if not name then return nil end
+    local want, list = {}, {}
+    for _, p in ipairs(cats or {}) do want[p] = true end
+    for _, p in ipairs(ns.CRAFT_ORDER) do -- keep panel order
+        if want[p] then list[#list + 1] = p end
+    end
+    local targets = ns.db.targets[ns.realm]
+    for k in pairs(targets) do -- same name, other case
+        if k:lower() == name:lower() then targets[k] = nil end
+    end
+    targets[name] = #list > 0 and { cats = list } or nil
+    if ns.Refresh then ns.Refresh() end
+    return name
+end
+
+function ns.Targets()
+    local list = {}
+    for name in pairs(ns.db.targets[ns.realm] or {}) do list[#list + 1] = name end
+    table.sort(list)
+    return list
+end
+
+function ns.TargetCats(name)
+    local t = ns.db.targets[ns.realm][name]
+    return t and t.cats or {}
 end
 
 function ns.MyChar()
@@ -257,6 +319,12 @@ end
 function ns.StacksFor(prof, alt)
     local upgrades = prof == "Upgrades"
     local set = ns.IS_REAGENT[prof]
+    if type(prof) == "table" then -- several categories at once (a recipient's)
+        set = {}
+        for _, p in ipairs(prof) do
+            for id in pairs(ns.IS_REAGENT[p] or {}) do set[id] = true end
+        end
+    end
     local stacks, totals, ids = {}, {}, {}
     if not set and not upgrades then return stacks, totals, ids end
     for bag = 0, (NUM_BAG_SLOTS or 4) do
@@ -415,6 +483,30 @@ SlashCmdList.RONISMAILMATS = function(msg)
         local _, link = GetItemInfo(id)
         ns.Print((link or ("item " .. id)) .. (cmd == "ignore" and " will never be drafted." or " can be drafted again."))
         if ns.Refresh then ns.Refresh() end
+    elseif cmd == "target" or cmd == "untarget" then
+        local name, rest = arg:match("^(%S+)%s*(.-)$")
+        if not name then
+            return ns.Print("Usage: /mailmats target <name> <category>, <category>... | /mailmats untarget <name>")
+        end
+        local cats = {}
+        if cmd == "target" then
+            for part in rest:gmatch("[^,]+") do
+                local p = ns.FindCategory(part)
+                if not p then return ns.Print("Unknown category '" .. strtrim(part) .. "'.") end
+                cats[#cats + 1] = p
+            end
+            if #cats == 0 then return ns.Print("Name at least one category, e.g. /mailmats target " .. name .. " tailoring, scrolls") end
+        end
+        local stored = ns.SetTarget(name, cats)
+        if #cats > 0 then
+            ns.Print(("%s will get %s."):format(stored, ns.What(ns.TargetCats(stored))))
+        else
+            ns.Print(stored .. " removed.")
+        end
+    elseif cmd == "targets" then
+        local list = ns.Targets()
+        if #list == 0 then ns.Print("No other recipients. Add one: /mailmats target <name> tailoring, scrolls") end
+        for _, name in ipairs(list) do ns.Print(("  %s: %s"):format(name, ns.What(ns.TargetCats(name)))) end
     elseif cmd == "scan" then
         ns.ScanSkills(true)
         ns.Print(ns.me .. ": " .. ProfString(ns.MyChar()))
@@ -438,6 +530,7 @@ SlashCmdList.RONISMAILMATS = function(msg)
             ns.Print(("  %s (%s, %s): %s"):format(name, c.faction or "?", c.level or "?", ProfString(c)))
         end
         ns.Print("/mailmats scan | selftest | forget <name> | ignore <item> | unignore <item> | ignored")
+        ns.Print("/mailmats target <name> <category>, ... | untarget <name> | targets")
     end
 end
 

@@ -74,6 +74,11 @@ Mails reagents to the alt who can use them.
     when there is something to send.
   Bind-on-pickup and soulbound items are never counted. Item level is the
   only measure; stats are not compared.
+- **Other recipients** (friends, guildies, anyone): **Add a recipient...**
+  on the panel opens an editor with a name and a checkbox per category
+  (every profession's mats, lockboxes, scrolls). Each recipient gets one
+  **Send all to <name> (N)** button that drafts everything they want in one
+  mail. Right-click the button to change or delete the recipient.
 
 "Mats" for a profession are all items used as a reagent by any of its
 recipes (`Data/Reagents.lua`, generated from RonisItemPedia's recipe database
@@ -81,7 +86,9 @@ by `tools/gen_reagents.js`). Soulbound and locked stacks are skipped.
 
 Commands: `/mailmats` lists known characters, `/mailmats forget <name>`,
 `/mailmats ignore <item>` / `unignore <item>` / `ignored` to keep specific
-items out of drafts. `/mailmats scan` re-reads this character's
+items out of drafts. `/mailmats target <name> tailoring, scrolls` adds or changes a recipient,
+`/mailmats untarget <name>` removes one, `/mailmats targets` lists them.
+`/mailmats scan` re-reads this character's
 professions; `/mailmats selftest` checks the client API the addon needs and
 shows what it reads.
 

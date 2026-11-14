@@ -242,6 +242,7 @@ function mock.NewSession(opts)
         SetText = function(self, t) self._text = t end,
         GetText = function(self) return self._text or "" end,
         SetFocus = function() end, ClearFocus = function() end,
+        SetAutoFocus = function() end, SetMaxLetters = function() end,
     }
 
     local function Merge(...)
@@ -252,7 +253,8 @@ function mock.NewSession(opts)
         return out
     end
 
-    local KNOWN_TEMPLATES = { BackdropTemplate = true, UIPanelButtonTemplate = true, UICheckButtonTemplate = true }
+    local KNOWN_TEMPLATES = { BackdropTemplate = true, UIPanelButtonTemplate = true, UICheckButtonTemplate = true,
+        InputBoxTemplate = true }
 
     function env.CreateFrame(kind, name, parent, template)
         if template then

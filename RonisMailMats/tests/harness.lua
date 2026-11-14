@@ -51,7 +51,7 @@ function T.Panel(S) return S.env.RonisMailMatsPanel end
 function T.Buttons(S)
     local out = {}
     for _, f in ipairs(S.frames) do
-        if f._type == "Button" and f._parent == T.Panel(S) and f._shown then
+        if f._type == "Button" and f._parent == T.Panel(S) and f._shown and rawget(f, "prof") ~= nil then
             out[#out + 1] = f
         end
     end
