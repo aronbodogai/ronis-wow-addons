@@ -461,16 +461,76 @@ end
 ---------------------------------------------------------------------------
 -- Why an item is held back (nil = mailable): on the ignore list, or (with
 -- "keep my own mats" on) a reagent for one of this character's professions.
+--
+-- Which of my professions keep their mats is chosen per profession
+-- (db.keepFor[prof]); by default the main crafting professions do and the
+-- secondary professions (Cooking, First Aid, Poisons) do not, so Linen Cloth for one bandage recipe does not
+-- stop it from going to your tailor.
+local KEEP_DEFAULT = {
+    Alchemy = true, Blacksmithing = true, Enchanting = true, Engineering = true,
+    Leatherworking = true, Tailoring = true, Mining = true,
+    Cooking = false, ["First Aid"] = false, Poisons = false,
+    Lockpicking = true, Comprehension = true, -- you open and read these yourself
+}
+function ns.KeepsFor(prof)
+    local v = ns.db.keepFor and ns.db.keepFor[prof]
+    if v == nil then return KEEP_DEFAULT[prof] or false end
+    return v
+end
+function ns.SetKeepFor(prof, on)
+    ns.db.keepFor = ns.db.keepFor or {}
+    ns.db.keepFor[prof] = on and true or false
+    if ns.Refresh then ns.Refresh() end
+end
+
+-- This character's professions that have mats, in panel order.
+function ns.MyCraftProfs()
+    local me = ns.MyChar()
+    local list = {}
+    for _, p in ipairs(ns.CRAFT_ORDER) do
+        if me and me.profs and me.profs[p] then list[#list + 1] = p end
+    end
+    return list
+end
+
 function ns.HoldReason(id)
     if ns.db.ignore[id] then return "ignored" end
     if ns.db.keepOwn then
-        local me = ns.MyChar()
-        for p in pairs(me and me.profs or {}) do
-            if ns.IS_REAGENT[p] and ns.IS_REAGENT[p][id] then
-                return "my " .. p
+        for _, p in ipairs(ns.MyCraftProfs()) do
+            if ns.KeepsFor(p) and ns.IS_REAGENT[p] and ns.IS_REAGENT[p][id] then
+                return "kept for your " .. p
             end
         end
     end
+end
+
+-- Items of a group that are in the bags but held back: { {id, count, reason} }.
+function ns.HeldFor(prof)
+    local set = ns.IS_REAGENT[prof]
+    if type(prof) == "table" then
+        set = {}
+        for _, p in ipairs(prof) do
+            for id in pairs(ns.IS_REAGENT[p] or {}) do set[id] = true end
+        end
+    end
+    local out, index = {}, {}
+    if not set then return out end
+    for bag = 0, (NUM_BAG_SLOTS or 4) do
+        for slot = 1, (GetContainerNumSlots(bag) or 0) do
+            local id = GetContainerItemID(bag, slot)
+            local why = id and set[id] and ns.HoldReason(id)
+            if why then
+                local count = SlotInfo(bag, slot) or 1
+                if index[id] then
+                    index[id][2] = index[id][2] + count
+                else
+                    index[id] = { id, count, why }
+                    out[#out + 1] = index[id]
+                end
+            end
+        end
+    end
+    return out
 end
 
 -- Returns { {bag, slot, id, count}, ... } of mailable stacks for prof,

@@ -61,7 +61,11 @@ Mails reagents to the alt who can use them.
   press the button again after sending.
 - Hover a button to see which items and how many would be attached.
 - **Keep mats for my own professions** (on by default) never drafts items
-  the current character can use for its own professions.
+  the current character uses for its own professions. **Choose** picks
+  which professions count: by default the main crafting professions,
+  Lockpicking and Comprehension do; Cooking, First Aid and Poisons do not
+  (otherwise Linen Cloth for bandages would never reach your tailor). Hover
+  a Send button to see what is held back and why.
 - Rogue alts with **Lockpicking** get a **Send lockboxes** button (lockboxes,
   junkboxes, locked chests), mage alts with **Comprehension** a **Send
   scrolls** button (the Forever mage scrolls). The tooltip marks items above

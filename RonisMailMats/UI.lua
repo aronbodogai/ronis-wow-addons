@@ -6,7 +6,7 @@ local PAD = 10
 local GetItemInfo = GetItemInfo or (C_Item and C_Item.GetItemInfo)
 local GetItemIcon = GetItemIcon or (C_Item and C_Item.GetItemIconByID)
 
-local panel, title, keepBox, emptyText, addButton, editor
+local panel, title, keepBox, emptyText, addButton, editor, keepText, keepChoose, keepFrame
 local headers, buttons, removers = {}, {}, {}
 
 local function ClassColor(class)
@@ -59,6 +59,18 @@ local function ButtonTooltip(self)
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine(("%d stack(s); one mail holds %d."):format(#stacks, ATTACHMENTS_MAX_SEND or 12), 0.6, 0.6, 0.6)
         GameTooltip:AddLine("Click to draft the mail. Nothing is sent until you press Send.", 0.6, 0.6, 0.6)
+    end
+    if self.prof ~= ns.UPGRADES then
+        local held = ns.HeldFor(self.prof)
+        if #held > 0 then
+            GameTooltip:AddLine(" ")
+            GameTooltip:AddLine("Not sent:", 1, 0.5, 0.25)
+            for _, h in ipairs(held) do
+                local name = GetItemInfo(h[1]) or ("item " .. h[1])
+                GameTooltip:AddDoubleLine(("%s x%d"):format(name, h[2]), h[3], 0.8, 0.8, 0.8, 1, 0.5, 0.25)
+            end
+            GameTooltip:AddLine("Change this with \"Keep mats for\" on the panel.", 0.6, 0.6, 0.6)
+        end
     end
     if self.target then
         GameTooltip:AddLine("Right-click to change what " .. self.alt .. " gets.", 0.6, 0.6, 0.6)
@@ -188,7 +200,18 @@ function ns.Refresh()
     keepBox:SetPoint("TOPLEFT", PAD - 4, y)
     keepBox:SetChecked(ns.db.keepOwn)
     keepBox.label:SetText("Keep mats for my own professions")
-    y = y - 28
+    y = y - 24
+    -- which of my professions keep their mats
+    local mine, kept = ns.MyCraftProfs(), {}
+    for _, p in ipairs(mine) do if ns.KeepsFor(p) then kept[#kept + 1] = p end end
+    keepText:SetPoint("TOPLEFT", PAD + 4, y)
+    keepText:SetText(#mine == 0 and "|cff999999(this character has no professions with mats)|r"
+        or ("|cff999999Keeping for:|r " .. (#kept > 0 and table.concat(kept, ", ") or "nothing")))
+    keepText:SetShown(ns.db.keepOwn)
+    keepChoose:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -PAD, y + 4)
+    keepChoose:SetShown(ns.db.keepOwn and #mine > 0)
+    if ns.db.keepOwn then y = y - math.max(20, keepText:GetStringHeight() + 6) end
+    if keepFrame and keepFrame:IsShown() then ns.RefreshKeepFrame() end
 
     panel:SetHeight(-y + PAD)
 end
@@ -231,6 +254,15 @@ function ns.InitUI()
         GameTooltip:Show()
     end)
     keepBox:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    keepText = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    keepText:SetWidth(WIDTH - 2 * PAD - 70)
+    keepText:SetJustifyH("LEFT")
+    keepText:SetWordWrap(true)
+    keepChoose = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    keepChoose:SetSize(64, 20)
+    keepChoose:SetText("Choose")
+    keepChoose:SetScript("OnClick", function() ns.ToggleKeepFrame() end)
 
     addButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     addButton:SetSize(WIDTH - 2 * PAD, 22)
@@ -429,4 +461,59 @@ function ns.OpenEditor(name)
     editor.delete:SetEnabled(name ~= nil)
     ShowSuggestions(name == nil)
     editor:Show()
+end
+
+---------------------------------------------------------------------------
+-- "Keep mats for" chooser: one checkbox per profession of this character
+---------------------------------------------------------------------------
+local keepBoxes = {}
+
+function ns.RefreshKeepFrame()
+    for _, cb in ipairs(keepBoxes) do cb:Hide() end
+    local y = -30
+    for i, p in ipairs(ns.MyCraftProfs()) do
+        local cb = keepBoxes[i]
+        if not cb then
+            cb = CreateFrame("CheckButton", nil, keepFrame, "UICheckButtonTemplate")
+            cb:SetSize(22, 22)
+            cb.label = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            cb.label:SetPoint("LEFT", cb, "RIGHT", 2, 0)
+            cb:SetScript("OnClick", function(self) ns.SetKeepFor(self.prof, self:GetChecked()) end)
+            keepBoxes[i] = cb
+        end
+        cb.prof = p
+        cb.label:SetText(p)
+        cb:SetChecked(ns.KeepsFor(p))
+        cb:ClearAllPoints()
+        cb:SetPoint("TOPLEFT", PAD - 4, y)
+        cb:Show()
+        y = y - 20
+    end
+    keepFrame:SetHeight(-y + PAD)
+end
+
+function ns.ToggleKeepFrame()
+    if not keepFrame then
+        keepFrame = CreateFrame("Frame", "RonisMailMatsKeep", panel, "BackdropTemplate")
+        keepFrame:SetWidth(170)
+        keepFrame:SetPoint("BOTTOMLEFT", panel, "BOTTOMRIGHT", 2, 0)
+        keepFrame:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+            tile = true, tileSize = 16, edgeSize = 16,
+            insets = { left = 4, right = 4, top = 4, bottom = 4 },
+        })
+        keepFrame:SetBackdropColor(0, 0, 0, 0.95)
+        keepFrame:EnableMouse(true)
+        local t = keepFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        t:SetPoint("TOPLEFT", PAD, -PAD)
+        t:SetText("Keep mats for")
+        keepFrame:Hide()
+    end
+    if keepFrame:IsShown() then
+        keepFrame:Hide()
+    else
+        keepFrame:Show()
+        ns.RefreshKeepFrame()
+    end
 end

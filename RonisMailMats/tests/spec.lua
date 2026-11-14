@@ -699,4 +699,45 @@ return function(T)
         local S2 = MainAtMailbox(T.Logout(S))
         ok(not S2.env.RonisMailMatsMinimapButton:IsShown(), "stays hidden after relog")
     end)
+
+    -----------------------------------------------------------------------
+    -- Keep mats for: per profession (regression: cloth held for First Aid)
+    -----------------------------------------------------------------------
+    local FIRST_AID = { line = 129, name = "First Aid", rank = 80, max = 150 }
+    local SMITH = { line = 164, name = "Blacksmithing", rank = 105, max = 150 }
+
+    test("regression: a First Aid sender still sends cloth to the tailor", function()
+        local S = MainAtMailbox(TailorAltSaved(), { profs = { FIRST_AID } })
+        eq(T.Button(S, "Tailoring"):GetText(), "Send Tailoring mats (3)", "linen and wool go")
+    end)
+
+    test("held items are listed in the tooltip, and Choose changes what is kept", function()
+        local S = MainAtMailbox(TailorAltSaved(), { profs = { SMITH, FIRST_AID } })
+        -- Blacksmithing uses Linen Cloth (kept by default), not Wool Cloth
+        eq(T.Button(S, "Tailoring"):GetText(), "Send Tailoring mats (1)", "wool only")
+        local b = T.Button(S, "Tailoring")
+        b._scripts.OnEnter(b)
+        contains(S.env.GameTooltip._lines, "Linen Cloth x25 | kept for your Blacksmithing", "reason shown")
+        -- the panel says what is kept, and Choose opens the per-profession list
+        local choose
+        for _, f in ipairs(S.frames) do
+            if f._parent == T.Panel(S) and f._text == "Choose" then choose = f end
+        end
+        ok(choose and choose:IsShown(), "Choose button")
+        choose:Click()
+        local keep = S.env.RonisMailMatsKeep
+        ok(keep and keep:IsShown(), "chooser open")
+        local smith
+        for _, f in ipairs(S.frames) do
+            if f._parent == keep and f._type == "CheckButton" and f._shown then
+                if f.prof == "Blacksmithing" then smith = f end
+                if f.prof == "First Aid" then ok(not f:GetChecked(), "First Aid not kept by default") end
+            end
+        end
+        ok(smith:GetChecked(), "Blacksmithing kept by default")
+        smith:Click()
+        eq(T.Button(S, "Tailoring"):GetText(), "Send Tailoring mats (3)", "linen goes after unticking")
+        local S2 = MainAtMailbox(T.Logout(S), { profs = { SMITH, FIRST_AID } })
+        eq(T.Button(S2, "Tailoring"):GetText(), "Send Tailoring mats (3)", "choice kept after relog")
+    end)
 end
