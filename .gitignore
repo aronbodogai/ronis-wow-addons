@@ -1,0 +1,6 @@
+# Track only our own addons (folders starting with "Ronis").
+# Everything else in AddOns is third-party and ignored.
+/*
+!/.gitignore
+!/README.md
+!/Ronis*/

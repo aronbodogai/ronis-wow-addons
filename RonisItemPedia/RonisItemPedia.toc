@@ -1,0 +1,10 @@
+## Interface: 16001
+## Title: |cffff8c1aRoni's|r ItemPedia
+## Notes: Alt + Left-Click any item to open a Factoriopedia-style item window.
+## Author: Roni
+## Version: 0.1.0
+## SavedVariables: RonisItemPediaDB
+## IconTexture: Interface\Icons\INV_Misc_Book_09
+
+Core.lua
+UI.lua
