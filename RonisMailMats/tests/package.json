@@ -1,0 +1,11 @@
+{
+  "name": "ronismailmats-tests",
+  "private": true,
+  "description": "Offline tests for Roni's MailMats: runs the addon in a Lua VM against a mocked WoW Forever client.",
+  "scripts": {
+    "test": "node run.js"
+  },
+  "devDependencies": {
+    "fengari": "0.1.4"
+  }
+}

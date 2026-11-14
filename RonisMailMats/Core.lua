@@ -57,11 +57,19 @@ ns.CRAFT_ORDER = {
     "Enchanting", "Mining", "Cooking", "First Aid", "Poisons",
 }
 
+-- Profession skill line IDs -> the English names used as keys everywhere
+-- (GetProfessionInfo's name follows the client language; the ID does not).
+ns.SKILL_LINES = {
+    [171] = "Alchemy", [164] = "Blacksmithing", [185] = "Cooking", [333] = "Enchanting",
+    [202] = "Engineering", [129] = "First Aid", [165] = "Leatherworking", [186] = "Mining",
+    [197] = "Tailoring", [40] = "Poisons",
+    [182] = "Herbalism", [393] = "Skinning", [356] = "Fishing",
+}
+
 -- Skill names we remember (crafting ones get buttons, gathering ones are
 -- only shown next to the character's name).
 local KNOWN_SKILLS = {}
-for _, p in ipairs(ns.CRAFT_ORDER) do KNOWN_SKILLS[p] = true end
-for _, p in ipairs({ "Herbalism", "Skinning", "Fishing" }) do KNOWN_SKILLS[p] = true end
+for _, p in pairs(ns.SKILL_LINES) do KNOWN_SKILLS[p] = true end
 
 ---------------------------------------------------------------------------
 -- Saved data
@@ -96,32 +104,69 @@ function ns.Alts()
 end
 
 ---------------------------------------------------------------------------
--- Profession scan (Classic skill lines)
+-- Profession scan
 ---------------------------------------------------------------------------
-local function ScanSkills()
-    if not GetNumSkillLines then return end
-    -- expand collapsed headers so every skill line is listed
-    for i = GetNumSkillLines(), 1, -1 do
-        local _, isHeader, isExpanded = GetSkillLineInfo(i)
-        if isHeader and not isExpanded and ExpandSkillHeader then ExpandSkillHeader(i) end
-    end
-    local n = GetNumSkillLines()
-    if n == 0 then return end -- not loaded yet; keep what we had
-
-    local profs = {}
-    for i = 1, n do
-        local name, isHeader, _, rank, _, _, maxRank = GetSkillLineInfo(i)
-        if not isHeader and name and KNOWN_SKILLS[name] then
-            profs[name] = { rank = rank, max = maxRank }
+-- Returns { [name] = { rank, max } } and the API used, or nil when the client
+-- has no profession API or it has not loaded yet.
+--
+-- The Forever client runs the modern engine: it has GetProfessions /
+-- GetProfessionInfo and NOT the Classic GetNumSkillLines / GetSkillLineInfo
+-- (Ketho/BlizzardInterfaceResources, forever branch). The skill line list
+-- is only a fallback for real Classic clients.
+function ns.ReadProfessions()
+    if GetProfessions and GetProfessionInfo then
+        local idx = { GetProfessions() } -- prof1, prof2, archaeology, fishing, cooking, first aid (nil holes)
+        local profs, any = {}, false
+        for k = 1, 6 do
+            if idx[k] then
+                local name, _, rank, maxRank, _, _, skillLine = GetProfessionInfo(idx[k])
+                local key = (skillLine and ns.SKILL_LINES[skillLine]) or (KNOWN_SKILLS[name] and name)
+                if key then
+                    profs[key] = { rank = rank, max = maxRank }
+                    any = true
+                end
+            end
         end
+        return profs, "GetProfessions", any
     end
+    if GetNumSkillLines and GetSkillLineInfo then
+        -- expand collapsed headers so every skill line is listed
+        for i = GetNumSkillLines(), 1, -1 do
+            local _, isHeader, isExpanded = GetSkillLineInfo(i)
+            if isHeader and not isExpanded and ExpandSkillHeader then ExpandSkillHeader(i) end
+        end
+        local n = GetNumSkillLines() or 0
+        if n == 0 then return nil, "GetSkillLineInfo" end -- not loaded yet
+        local profs, any = {}, false
+        for i = 1, n do
+            local name, isHeader, _, rank, _, _, maxRank = GetSkillLineInfo(i)
+            if not isHeader and name and KNOWN_SKILLS[name] then
+                profs[name] = { rank = rank, max = maxRank }
+                any = true
+            end
+        end
+        return profs, "GetSkillLineInfo", any
+    end
+    return nil, "none"
+end
 
+-- Records this character. Always stores the character (so it shows up as an
+-- alt even without professions); professions are only replaced by a
+-- non-empty read, or an empty one after login has settled (`final`), so an
+-- API that is not ready yet never wipes what we knew.
+function ns.ScanSkills(final)
+    local profs, _, any = ns.ReadProfessions()
+    local chars = ns.db.chars[ns.realm]
+    local old = chars[ns.me]
+    if not any and not final and old and old.profs then
+        profs = old.profs
+    end
     local _, class = UnitClass("player")
-    ns.db.chars[ns.realm][ns.me] = {
+    chars[ns.me] = {
         class = class,
         faction = ns.faction,
         level = UnitLevel("player"),
-        profs = profs,
+        profs = profs or (old and old.profs) or {},
         seen = time(),
     }
     if ns.Refresh then ns.Refresh() end
@@ -205,8 +250,8 @@ local function Attach(name, prof)
             end
         end
     end
-    SendMailNameEditBox:SetText(name)
-    SendMailSubjectEditBox:SetText(prof .. " mats")
+    if SendMailNameEditBox then SendMailNameEditBox:SetText(name) end
+    if SendMailSubjectEditBox then SendMailSubjectEditBox:SetText(prof .. " mats") end
     local left = #stacks - attached - skipped
     if left > 0 then
         ns.Print(("Drafted %d stacks of %s mats for %s. %d more stack(s) left - press the button again after sending.")
@@ -249,10 +294,14 @@ ev:RegisterEvent("PLAYER_LEVEL_UP")
 ev:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then
         InitDB()
-        C_Timer.After(2, ScanSkills) -- skill lines can be empty right at login
+        ns.ScanSkills(false)
+        -- profession data can arrive a little after login: look again, and
+        -- trust an empty answer only once things have settled
+        C_Timer.After(3, function() ns.ScanSkills(false) end)
+        C_Timer.After(15, function() ns.ScanSkills(true) end)
         if ns.InitUI then ns.InitUI() end
     elseif ns.db then
-        ScanSkills()
+        ns.ScanSkills(false)
     end
 end)
 
@@ -294,6 +343,11 @@ SlashCmdList.RONISMAILMATS = function(msg)
         local _, link = GetItemInfo(id)
         ns.Print((link or ("item " .. id)) .. (cmd == "ignore" and " will never be drafted." or " can be drafted again."))
         if ns.Refresh then ns.Refresh() end
+    elseif cmd == "scan" then
+        ns.ScanSkills(true)
+        ns.Print(ns.me .. ": " .. ProfString(ns.MyChar()))
+    elseif cmd == "selftest" then
+        ns.SelfTest()
     elseif cmd == "ignored" then
         local any = false
         for id in pairs(ns.db.ignore) do
@@ -311,6 +365,53 @@ SlashCmdList.RONISMAILMATS = function(msg)
             local c = ns.db.chars[ns.realm][name]
             ns.Print(("  %s (%s, %s): %s"):format(name, c.faction or "?", c.level or "?", ProfString(c)))
         end
-        ns.Print("/mailmats forget <name> | ignore <item> | unignore <item> | ignored")
+        ns.Print("/mailmats scan | selftest | forget <name> | ignore <item> | unignore <item> | ignored")
     end
+end
+
+---------------------------------------------------------------------------
+-- In-game self test: /mailmats selftest
+-- Checks the client API this addon relies on and shows what it reads.
+---------------------------------------------------------------------------
+local REQUIRED = {
+    "GetRealmName", "UnitName", "UnitClass", "UnitFactionGroup", "UnitLevel",
+    "C_Container.GetContainerNumSlots", "C_Container.GetContainerItemID",
+    "C_Container.GetContainerItemInfo", "C_Container.PickupContainerItem",
+    "HasSendMailItem", "ClickSendMailItemButton", "CursorHasItem", "ClearCursor",
+    "C_Timer.After", "MailFrame", "MailFrameTab2", "SendMailFrame",
+    "SendMailNameEditBox", "SendMailSubjectEditBox",
+}
+
+local function Lookup(path)
+    local v = _G
+    for part in path:gmatch("[^.]+") do
+        if type(v) ~= "table" then return nil end
+        v = v[part]
+    end
+    return v
+end
+
+function ns.SelfTest()
+    local bad = 0
+    for _, name in ipairs(REQUIRED) do
+        if Lookup(name) == nil then
+            bad = bad + 1
+            ns.Print("|cffff4040missing|r " .. name)
+        end
+    end
+    local profs, api = ns.ReadProfessions()
+    if api == "none" then
+        bad = bad + 1
+        ns.Print("|cffff4040missing|r profession API (GetProfessions or GetSkillLineInfo)")
+    end
+    local parts = {}
+    for p, info in pairs(profs or {}) do parts[#parts + 1] = p .. " " .. tostring(info.rank) end
+    table.sort(parts)
+    ns.Print(("Profession API: %s -> %s"):format(api, #parts > 0 and table.concat(parts, ", ") or "nothing"))
+    local n = 0
+    for _ in pairs(ns.db.chars[ns.realm] or {}) do n = n + 1 end
+    ns.Print(("Realm '%s', %s, %d character(s) saved, %d alt(s) mailable."):format(
+        tostring(ns.realm), tostring(ns.faction), n, #ns.Alts()))
+    ns.Print(bad == 0 and "|cff40ff40Self test passed.|r" or ("|cffff4040%d problem(s).|r"):format(bad))
+    return bad
 end

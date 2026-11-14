@@ -13,7 +13,7 @@ local function ClassColor(class)
     local c = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
     if not c then return "ffffffff" end
     if c.colorStr then return c.colorStr end
-    return ("ff%02x%02x%02x"):format(c.r * 255, c.g * 255, c.b * 255)
+    return ("ff%02x%02x%02x"):format(math.floor(c.r * 255), math.floor(c.g * 255), math.floor(c.b * 255))
 end
 
 local function GetHeader(i)
