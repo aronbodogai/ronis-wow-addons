@@ -439,6 +439,7 @@ ev:SetScript("OnEvent", function(_, event)
         C_Timer.After(3, function() ns.ScanSkills(false) end)
         C_Timer.After(15, function() ns.ScanSkills(true) end)
         if ns.InitGear then ns.InitGear() end
+        if ns.InitSocial then ns.InitSocial() end
         if ns.InitUI then ns.InitUI() end
     elseif ns.db then
         ns.ScanSkills(false)

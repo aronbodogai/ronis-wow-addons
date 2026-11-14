@@ -78,7 +78,14 @@ Mails reagents to the alt who can use them.
   on the panel opens an editor with a name and a checkbox per category
   (every profession's mats, lockboxes, scrolls). Each recipient gets one
   **Send all to <name> (N)** button that drafts everything they want in one
-  mail. Right-click the button to change or delete the recipient.
+  mail. Right-click the button to change it; the **X** next to the name
+  removes the recipient.
+  - The editor suggests people when adding a new recipient: friends (online
+    first), Battle.net friends playing on this realm and faction, people you
+    mailed (the last 15 sends are remembered), senders in your open inbox,
+    and guild members. Your own characters and existing recipients are left
+    out. Clicking a suggestion fills in the name; a mage also gets scrolls
+    ticked and a rogue lockboxes.
 
 "Mats" for a profession are all items used as a reagent by any of its
 recipes (`Data/Reagents.lua`, generated from RonisItemPedia's recipe database

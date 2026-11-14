@@ -7,7 +7,7 @@ local GetItemInfo = GetItemInfo or (C_Item and C_Item.GetItemInfo)
 local GetItemIcon = GetItemIcon or (C_Item and C_Item.GetItemIconByID)
 
 local panel, title, keepBox, emptyText, addButton, editor
-local headers, buttons = {}, {}
+local headers, buttons, removers = {}, {}, {}
 
 local function ClassColor(class)
     local c = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
@@ -25,6 +25,7 @@ local function GetHeader(i)
         h:SetWordWrap(true)
         headers[i] = h
     end
+    h:SetWidth(WIDTH - 2 * PAD)
     h:Show()
     return h
 end
@@ -86,10 +87,36 @@ local function GetButton(i)
     return b
 end
 
+-- Small "X" next to a recipient's name: removes the recipient.
+local function GetRemover(i)
+    local b = removers[i]
+    if not b then
+        b = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+        b:SetSize(20, 18)
+        b:SetText("X")
+        b:SetScript("OnClick", function(self)
+            local name = self.target
+            ns.SetTarget(name, nil)
+            ns.Print(("Removed %s. Add them again with \"Add a recipient...\"."):format(name))
+        end)
+        b:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:AddLine("Remove " .. self.target)
+            GameTooltip:AddLine("Right-click the Send button to edit instead.", 0.6, 0.6, 0.6)
+            GameTooltip:Show()
+        end)
+        b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        removers[i] = b
+    end
+    b:Show()
+    return b
+end
+
 function ns.Refresh()
     if not (panel and panel:IsShown()) then return end
     for _, h in ipairs(headers) do h:Hide() end
     for _, b in ipairs(buttons) do b:Hide() end
+    for _, b in ipairs(removers) do b:Hide() end
 
     local y = -34
     local nh, nb = 0, 0
@@ -123,11 +150,15 @@ function ns.Refresh()
     end
 
     -- other recipients: one button for everything they want
-    for _, name in ipairs(ns.Targets()) do
+    for i, name in ipairs(ns.Targets()) do
         local cats = ns.TargetCats(name)
         nh = nh + 1
         local h = GetHeader(nh)
         h:SetPoint("TOPLEFT", PAD, y)
+        h:SetWidth(WIDTH - 2 * PAD - 24) -- room for the remove button
+        local rm = GetRemover(i)
+        rm.target = name
+        rm:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -PAD + 2, y + 3)
         local names = {}
         for _, p in ipairs(cats) do names[#names + 1] = p end
         h:SetText(("|cffffd100%s|r |cff999999%s|r"):format(name, table.concat(names, ", ")))
@@ -301,7 +332,61 @@ local function BuildEditor()
         editor:Hide()
     end)
     editor.cancel = Btn("Cancel", PAD + 2 * (w + 4), function() editor:Hide() end)
-    editor:SetHeight(-y + 22 + PAD)
+    y = y - 30
+
+    -- suggestions (new recipients only): friends, guild, mail partners
+    editor.sugTitle = editor:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    editor.sugTitle:SetPoint("TOPLEFT", PAD, y)
+    editor.sugTitle:SetText("Suggestions")
+    editor.sugEmpty = editor:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    editor.sugEmpty:SetPoint("TOPLEFT", PAD, y - 18)
+    editor.sugEmpty:SetWidth(EDIT_W - 2 * PAD)
+    editor.sugEmpty:SetJustifyH("LEFT")
+    editor.sugEmpty:SetText("Nobody to suggest: no friends, guild members or mail partners who are not already here.")
+    editor.baseY = y
+    editor.baseH = -y + PAD
+    editor.sugButtons = {}
+end
+
+local function Suggest(self)
+    editor.nameBox:SetText(self.name)
+    local hint = {}
+    for _, p in ipairs(self.cats) do hint[p] = true end
+    for _, cb in ipairs(editor.boxes) do
+        if hint[cb.cat] then cb:SetChecked(true) end
+    end
+end
+
+local function ShowSuggestions(show)
+    for _, b in ipairs(editor.sugButtons) do b:Hide() end
+    editor.sugTitle:SetShown(show)
+    editor.sugEmpty:Hide()
+    if not show then
+        editor:SetHeight(editor.baseH)
+        return
+    end
+    local list = ns.Suggestions(8)
+    local y = editor.baseY - 18
+    for i, s in ipairs(list) do
+        local b = editor.sugButtons[i]
+        if not b then
+            b = CreateFrame("Button", nil, editor, "UIPanelButtonTemplate")
+            b:SetSize(EDIT_W - 2 * PAD, 20)
+            b:SetScript("OnClick", Suggest)
+            editor.sugButtons[i] = b
+        end
+        b.name, b.cats = s.name, s.cats
+        b:SetText(("%s |cff999999(%s)|r"):format(s.name, s.why))
+        b:ClearAllPoints()
+        b:SetPoint("TOPLEFT", PAD, y)
+        b:Show()
+        y = y - 22
+    end
+    if #list == 0 then
+        editor.sugEmpty:Show()
+        y = y - editor.sugEmpty:GetStringHeight() - 4
+    end
+    editor:SetHeight(-y + PAD)
 end
 
 -- Opens the editor for a recipient, or empty for a new one.
@@ -314,5 +399,6 @@ function ns.OpenEditor(name)
     for _, p in ipairs(name and ns.TargetCats(name) or {}) do want[p] = true end
     for _, cb in ipairs(editor.boxes) do cb:SetChecked(want[cb.cat] or false) end
     editor.delete:SetEnabled(name ~= nil)
+    ShowSuggestions(name == nil)
     editor:Show()
 end

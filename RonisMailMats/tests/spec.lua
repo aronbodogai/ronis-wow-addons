@@ -463,4 +463,75 @@ return function(T)
         ed.delete:Click()
         eq(S.env.RonisMailMatsDB.targets[REALM].Friend, nil, "deleted")
     end)
+
+    -----------------------------------------------------------------------
+    -- Removing recipients, suggestions
+    -----------------------------------------------------------------------
+    local function Removers(S)
+        local out = {}
+        for _, f in ipairs(S.frames) do
+            if f._type == "Button" and f._parent == T.Panel(S) and f._shown and f._text == "X" then
+                out[#out + 1] = f
+            end
+        end
+        return out
+    end
+
+    test("each recipient has an X button that removes it", function()
+        local S = MainAtMailbox(nil, { bags = Bags(LOCKBOX_BAGS) })
+        S.Slash("/mailmats", "target Bob tailoring")
+        S.Slash("/mailmats", "target Ann scrolls")
+        eq(#Removers(S), 2, "one per recipient")
+        local bob
+        for _, r in ipairs(Removers(S)) do if r.target == "Bob" then bob = r end end
+        bob:Click()
+        eq(S.env.RonisMailMatsDB.targets[REALM].Bob, nil, "Bob removed")
+        ok(S.env.RonisMailMatsDB.targets[REALM].Ann, "Ann kept")
+        eq(#Removers(S), 1, "one left")
+        contains(S.printLog, "Removed Bob", "message")
+    end)
+
+    local SOCIAL = {
+        friends = { { "Offlinepal", "Warrior", 40, false }, { "Mageybff", "Mage", 25, true }, { "Alt", "Priest", 10, true } },
+        bnet = { { "Bnetrogue", REALM, "Alliance", "Rogue", 30 }, { "Farrealm", "Other Realm", "Alliance", "Mage", 30 },
+                 { "Hordie", REALM, "Horde", "Mage", 30 } },
+        guild = { { "Guildie-TestRealm", 20, "Priest", "PRIEST", true }, { "Mageybff-TestRealm", 25, "Mage", "MAGE", true } },
+        inbox = { { "Stormwind Auction House" }, { "Gamemaster", true }, { "Pen-pal" } },
+    }
+
+    test("suggestions come from friends, Battle.net, mail and guild", function()
+        local saved = TailorAltSaved()
+        local opts = { bags = Bags(LOCKBOX_BAGS) }
+        for k, v in pairs(SOCIAL) do opts[k] = v end
+        local S = MainAtMailbox(saved, opts)
+        S.Slash("/mailmats", "target Offlinepal tailoring")
+        S.env.SendMail("Mailbuddy", "hi", "")
+        local names = {}
+        for _, s in ipairs(S.ns.Suggestions(20)) do names[#names + 1] = s.name .. ":" .. s.why end
+        local got = table.concat(names, " / ")
+        eq(got, "Mageybff:friend, Mage 25 / Bnetrogue:Battle.net friend, Rogue 30 / Mailbuddy:you mailed"
+            .. " / Pen-pal:mailed you / Guildie:guild, Priest 20", "order and sources")
+        ok(S.rosterRequests > 0, "guild roster requested")
+    end)
+
+    test("the editor lists suggestions and a click fills the name and hint", function()
+        local opts = { bags = Bags(LOCKBOX_BAGS) }
+        for k, v in pairs(SOCIAL) do opts[k] = v end
+        local S = MainAtMailbox(TailorAltSaved(), opts)
+        S.ns.OpenEditor(nil)
+        local ed = S.env.RonisMailMatsEditor
+        local first
+        for _, b in ipairs(ed.sugButtons) do if b._shown and not first then first = b end end
+        ok(first and first._text:find("Mageybff"), "first suggestion: " .. tostring(first and first._text))
+        first:Click()
+        eq(ed.nameBox:GetText(), "Mageybff", "name filled")
+        local ticked = {}
+        for _, cb in ipairs(ed.boxes) do if cb:GetChecked() then ticked[#ticked + 1] = cb.cat end end
+        eq(table.concat(ticked, ","), "Comprehension", "a mage gets scrolls ticked")
+        ed.save:Click()
+        ok(S.env.RonisMailMatsDB.targets[REALM].Mageybff, "saved")
+        -- editing an existing recipient shows no suggestions
+        S.ns.OpenEditor("Mageybff")
+        for _, b in ipairs(ed.sugButtons) do ok(not b._shown, "hidden when editing") end
+    end)
 end

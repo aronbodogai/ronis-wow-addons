@@ -18,6 +18,10 @@
 --   mailLag  = true: HasSendMailItem only updates on the next timer tick
 --   equipped = { [inventory slot] = itemID }
 --   bagnon   = true: a minimal Bagnon (Bagnon.Item with UpdateUpgradeIcon)
+--   friends  = { { name, className, level, connected } }
+--   bnet     = { { characterName, realmName, factionName, className, characterLevel } }
+--   guild    = { { name ("Name-Realm"), level, class, classFile, online } }
+--   inbox    = { { sender, isGM } }
 -- }
 local mock = {}
 
@@ -555,6 +559,49 @@ function mock.NewSession(opts)
             if a then out[#out + 1] = { slot = i, id = a.item.id, count = a.item.count } end
         end
         return out
+    end
+
+    -------------------------------------------------------------------------
+    -- Friends, Battle.net, guild, inbox
+    -------------------------------------------------------------------------
+    env.LOCALIZED_CLASS_NAMES_MALE = { MAGE = "Mage", ROGUE = "Rogue", WARRIOR = "Warrior", PRIEST = "Priest" }
+    env.LOCALIZED_CLASS_NAMES_FEMALE = { MAGE = "Mage", ROGUE = "Rogue", WARRIOR = "Warrior", PRIEST = "Priest" }
+    env.GetNormalizedRealmName = function() return (env.GetRealmName():gsub("[%s%-]", "")) end
+    local friends = opts.friends or {}
+    env.C_FriendList = {
+        GetNumFriends = function() return #friends end,
+        GetFriendInfoByIndex = function(i)
+            local f = friends[i]
+            return f and { name = f[1], className = f[2], level = f[3], connected = f[4] or false } or nil
+        end,
+    }
+    local bnet = opts.bnet or {}
+    env.BNGetNumFriends = function() return #bnet, #bnet end
+    env.C_BattleNet = {
+        GetFriendNumGameAccounts = function(i) return bnet[i] and 1 or 0 end,
+        GetFriendGameAccountInfo = function(i, j)
+            local g = bnet[i]
+            if not g or j ~= 1 then return nil end
+            return { characterName = g[1], realmName = g[2], factionName = g[3], className = g[4],
+                     characterLevel = g[5], clientProgram = "WoW" }
+        end,
+    }
+    local guild = opts.guild or {}
+    env.IsInGuild = function() return #guild > 0 end
+    env.GetNumGuildMembers = function() return #guild, #guild end
+    env.GetGuildRosterInfo = function(i)
+        local g = guild[i]
+        if not g then return nil end
+        return g[1], "Member", 1, g[2], g[3], "Elwynn", "", "", g[5] or false, 0, g[4]
+    end
+    S.rosterRequests = 0
+    env.C_GuildInfo = { GuildRoster = function() S.rosterRequests = S.rosterRequests + 1 end }
+    local inbox = opts.inbox or {}
+    env.GetInboxNumItems = function() return #inbox, #inbox end
+    env.GetInboxHeaderInfo = function(i)
+        local mail = inbox[i]
+        if not mail then return nil end
+        return nil, nil, mail[1], "subject", 0, 0, 30, false, true, false, false, false, mail[2] or false
     end
 
     -------------------------------------------------------------------------
