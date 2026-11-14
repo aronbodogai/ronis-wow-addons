@@ -66,7 +66,20 @@ by `tools/gen_reagents.js`). Soulbound and locked stacks are skipped.
 
 Commands: `/mailmats` lists known characters, `/mailmats forget <name>`,
 `/mailmats ignore <item>` / `unignore <item>` / `ignored` to keep specific
-items out of drafts.
+items out of drafts. `/mailmats scan` re-reads this character's
+professions; `/mailmats selftest` checks the client API the addon needs and
+shows what it reads.
+
+Professions are read with `GetProfessions` / `GetProfessionInfo` (the
+Forever client has no Classic `GetSkillLineInfo`), keyed by skill line ID so
+the client language does not matter.
+
+Tests: `cd RonisMailMats/tests && npm install && npm test`. The addon runs
+in a Lua VM (fengari) against a mocked client (`wowmock.lua`); the mock may
+only define functions that exist on the Forever client, checked against
+Ketho/BlizzardInterfaceResources (branch `forever`, cached in
+`tests/.cache`, `REFRESH_API=1` to re-download). The same suite runs in
+GitHub Actions (`.github/workflows/test-mailmats.yml`).
 
 Regenerating after the recipe database changes:
 

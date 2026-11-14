@@ -1,0 +1,36 @@
+name: Test Roni's MailMats
+
+# Runs the offline test suite (RonisMailMats/tests) on every push and pull
+# request that touches the addon or the recipe database it is built from.
+
+on:
+  push:
+    paths:
+      - 'RonisMailMats/**'
+      - 'RonisItemPedia/Data/Recipes.lua'
+      - '.github/workflows/test-mailmats.yml'
+  pull_request:
+    paths:
+      - 'RonisMailMats/**'
+      - 'RonisItemPedia/Data/Recipes.lua'
+      - '.github/workflows/test-mailmats.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: RonisMailMats/tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm test
+        env:
+          REFRESH_API: '1' # always check against the current Forever API dump
