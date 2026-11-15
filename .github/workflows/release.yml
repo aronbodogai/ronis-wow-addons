@@ -12,6 +12,8 @@ name: Release Roni's One For All
 # repository secrets CF_API_KEY / WAGO_API_TOKEN are set AND the toc has
 # X-Curse-Project-ID / X-Wago-ID. Without them that destination is skipped.
 
+# Run it by hand (Actions > Run workflow) to test the zip without uploading.
+
 on:
   push:
     tags:
@@ -52,7 +54,8 @@ jobs:
       - name: Package and publish
         uses: BigWigsMods/packager@v2
         with:
-          args: -m RonisOneForAll/.pkgmeta
+          # manual runs (workflow_dispatch) only build the zip; uploads happen on tags
+          args: -m RonisOneForAll/.pkgmeta ${{ github.event_name == 'workflow_dispatch' && '-d' || '' }}
         env:
           GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
