@@ -1,10 +1,7 @@
 # Roni's ItemPedia
 
-## v0.4.1
-
-- Packaging fix: the v0.4.0 download also contained an unrelated addon
-  folder (RonisMailMats) inside the ItemPedia folder. It was never loaded by
-  the game; this release removes it.
+Released as part of Roni's One For All since v0.5.0 (see
+`RonisOneForAll/CHANGELOG.md`).
 
 ## v0.4.0
 

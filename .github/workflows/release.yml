@@ -1,11 +1,12 @@
-name: Release Roni's ItemPedia
+name: Release Roni's One For All
 
 # Tag a version and this builds the zip and publishes it:
 #
-#   git tag v0.3.0 && git push origin v0.3.0
+#   git tag v0.5.0 && git push origin v0.5.0
 #
-# Before tagging, add a "## vX.Y.Z" section to RonisItemPedia/CHANGELOG.md;
-# it becomes the release notes on GitHub, CurseForge and Wago.
+# One zip with every Roni's addon (see RonisOneForAll/.pkgmeta). Before
+# tagging, add a "## vX.Y.Z" section to RonisOneForAll/CHANGELOG.md; it becomes
+# the release notes on GitHub, CurseForge and Wago.
 #
 # Destinations: GitHub Releases always. CurseForge and Wago only when the
 # repository secrets CF_API_KEY / WAGO_API_TOKEN are set AND the toc has
@@ -31,7 +32,7 @@ jobs:
       - name: Lua syntax check
         run: |
           sudo apt-get install -y -qq lua5.1 >/dev/null
-          find RonisItemPedia -name '*.lua' -not -path '*/tools/*' -print0 | xargs -0 -n1 luac5.1 -p
+          find Ronis* -name '*.lua' -not -path '*/tools/*' -not -path '*/tests/*' -print0 | xargs -0 -n1 luac5.1 -p
           echo "Lua syntax OK"
 
       - name: Report which destinations are configured
@@ -39,7 +40,7 @@ jobs:
           CF: ${{ secrets.CF_API_KEY }}
           WAGO: ${{ secrets.WAGO_API_TOKEN }}
         run: |
-          toc=RonisItemPedia/RonisItemPedia.toc
+          toc=RonisOneForAll/RonisOneForAll.toc
           check() { # name, token, toc directive
             local id; id=$(grep -m1 "^## $3:" "$toc" | cut -d: -f2- | xargs)
             if [ -n "$2" ] && [ -n "$id" ]; then echo "$1: project $id, token set"
@@ -51,7 +52,7 @@ jobs:
       - name: Package and publish
         uses: BigWigsMods/packager@v2
         with:
-          args: -m RonisItemPedia/.pkgmeta
+          args: -m RonisOneForAll/.pkgmeta
         env:
           GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
           CF_API_KEY: ${{ secrets.CF_API_KEY }}

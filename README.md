@@ -171,14 +171,21 @@ ItemSparse and Lock tables:
     # download ItemSparse and Lock CSVs from https://wago.tools/db2/<Table>/csv?build=<build>, then:
     node RonisMailMats/tools/gen_skill_items.js <csv-folder> <build> > RonisMailMats/Data/SkillItems.lua
 
-## Releasing
+## Releasing: Roni's One For All
 
-Releases are built by `.github/workflows/release-itempedia.yml` with the
-BigWigsMods packager (config: `RonisItemPedia/.pkgmeta`).
+All addons ship together as one download, **Roni's One For All**: a zip with
+each addon as its own top-level folder plus the small `RonisOneForAll` hub
+addon (`/roni` lists the installed addons and their commands). Built by
+`.github/workflows/release.yml` with the BigWigsMods packager (config:
+`RonisOneForAll/.pkgmeta`).
 
-1. Add a `## vX.Y.Z` section to `RonisItemPedia/CHANGELOG.md`.
+1. Add a `## vX.Y.Z` section to `RonisOneForAll/CHANGELOG.md`.
 2. `git tag vX.Y.Z && git push origin vX.Y.Z`
 
 The zip always goes to GitHub Releases. CurseForge and Wago uploads need the
 `CF_API_KEY` / `WAGO_API_TOKEN` repository secrets and the
-`X-Curse-Project-ID` / `X-Wago-ID` lines in `RonisItemPedia.toc`.
+`X-Curse-Project-ID` / `X-Wago-ID` lines in `RonisOneForAll.toc`.
+
+Adding a new addon to the bundle: a `move-folders` line in
+`RonisOneForAll/.pkgmeta` (plus its tools/tests in `ignore`) and a row in
+`RonisOneForAll/Hub.lua`.
