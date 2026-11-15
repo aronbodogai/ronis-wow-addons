@@ -30,3 +30,4 @@ ignore:
   - RonisItemPedia/tools
   - RonisMailMats/tools
   - RonisMailMats/tests
+  - RonisOneForAll/docs
