@@ -5,7 +5,6 @@
 ## Version: @project-version@
 ## X-Curse-Project-ID: 1804431
 ## X-Wago-ID: bGoYgo60
-## X-Website: https://github.com/aronbodogai/ronis-wow-addons
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
 
 Hub.lua

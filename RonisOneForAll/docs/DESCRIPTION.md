@@ -80,6 +80,3 @@ Auctionator is installed.
 
 The map button cannot open the world map during combat, because the game
 does not allow it.
-
-Source code and issues:
-[github.com/aronbodogai/ronis-wow-addons](https://github.com/aronbodogai/ronis-wow-addons)
