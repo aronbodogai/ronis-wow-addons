@@ -86,6 +86,7 @@ end
 --                  learnSkill (0 = unknown), yellowSkill, greySkill, autoLearned, { recipeItemID, ... } }
 ---------------------------------------------------------------------------
 ns.madeBy, ns.usedIn, ns.bySpell = {}, {}, {}
+ns.reagentFor = {}
 
 local function BuildIndex()
     local madeBy, usedIn, bySpell = {}, {}, {}
@@ -104,6 +105,18 @@ local function BuildIndex()
         end
     end
     ns.madeBy, ns.usedIn, ns.bySpell = madeBy, usedIn, bySpell
+
+    -- Class spells that use an item as a reagent (Data/ClassSpells.lua)
+    local reagentFor = {}
+    for _, s in ipairs(ns.CLASS_SPELLS or {}) do
+        local reg = s[3]
+        for k = 1, #reg, 2 do
+            local t = reagentFor[reg[k]]
+            if not t then t = {}; reagentFor[reg[k]] = t end
+            t[#t + 1] = { spell = s[1], classes = s[2], count = reg[k + 1] }
+        end
+    end
+    ns.reagentFor = reagentFor
 end
 
 -- Friendly view of one recipe row.

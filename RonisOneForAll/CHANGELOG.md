@@ -4,6 +4,15 @@ Every Roni's addon in one download. Each addon is its own folder and can be
 turned off on its own in the AddOns list. Type `/roni` in game to see what is
 installed and how to use it.
 
+## Unreleased
+
+**Roni's ItemPedia**
+
+- New **Reagent for spells** section: class spells that use the item, such as
+  Water Walking (Fish Oil) or the warlock spells that use a Soul Shard.
+- If one section fails to draw, the others still show and the error is
+  printed in chat.
+
 ## v0.5.0
 
 Roni's ItemPedia is now part of **Roni's One For All**. Updating installs

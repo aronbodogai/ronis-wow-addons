@@ -8,6 +8,7 @@
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
 
 Data\Recipes.lua
+Data\ClassSpells.lua
 Core.lua
 Sources.lua
 UI.lua

@@ -389,6 +389,54 @@ function UI:SectionUsedIn(id, y)
     return Finish(s, cy - 4, y)
 end
 
+-- Class spells that use the item as a reagent, one row per spell name
+-- (ranks of the same spell are merged).
+local function ClassText(classes)
+    local out = {}
+    for cls in classes:gmatch("[^,]+") do
+        local name = (LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[cls])
+            or (cls:sub(1, 1) .. cls:sub(2):lower())
+        local c = RAID_CLASS_COLORS and RAID_CLASS_COLORS[cls]
+        out[#out + 1] = c and string.format("|cff%02x%02x%02x%s|r", math.floor(c.r * 255 + 0.5), math.floor(c.g * 255 + 0.5), math.floor(c.b * 255 + 0.5), name) or name
+    end
+    return table.concat(out, ", ")
+end
+
+function UI:SectionReagentFor(id, y)
+    local list = ns.reagentFor and ns.reagentFor[id]
+    if not list then return y end
+    local rows, byName = {}, {}
+    for _, e in ipairs(list) do
+        local name = ns.SpellInfo(e.spell) or ("Spell " .. e.spell)
+        local row = byName[name]
+        if not row then
+            row = { name = name, spell = e.spell, classes = e.classes, min = e.count, max = e.count, ranks = 0 }
+            byName[name] = row
+            rows[#rows + 1] = row
+        end
+        row.ranks = row.ranks + 1
+        row.min, row.max = math.min(row.min, e.count), math.max(row.max, e.count)
+    end
+    table.sort(rows, function(a, b)
+        if a.classes ~= b.classes then return a.classes < b.classes end
+        return a.name < b.name
+    end)
+    local s = self:AcquireSection("Reagent for spells (" .. #rows .. ")", y)
+    local cy = SECTION_TOP
+    for _, r in ipairs(rows) do
+        local need = r.min == r.max and r.min or (r.min .. "-" .. r.max)
+        local b = s:Slot(22)
+        b:SetPoint("TOPLEFT", 10, -cy)
+        ns.SetSlotSpell(b, r.spell, "needs " .. need)
+        local t = s:Text("GameFontHighlight")
+        t:SetPoint("LEFT", b, "RIGHT", 8, 0)
+        t:SetText("|cffffd100" .. r.name .. "|r  |cff8c8c8c" .. need .. "x  -|r  " .. ClassText(r.classes)
+            .. (r.ranks > 1 and ("  |cff8c8c8call " .. r.ranks .. " ranks|r") or ""))
+        cy = cy + 26
+    end
+    return Finish(s, cy, y)
+end
+
 local RANK_COLOR = { Boss = "|cffff6040", Elite = "|cffffd100", ["Rare Elite"] = "|cffc0c0ff", Rare = "|cffc0c0ff" }
 
 local function NpcText(row)
@@ -1008,6 +1056,7 @@ function UI:Render()
     Draw(self.SectionCreatedBy, id)
     Draw(self.SectionTeaches, src, id)
     Draw(self.SectionUsedIn, id)
+    Draw(self.SectionReagentFor, id)
     Draw(self.SectionRows, "Required for quests", src.requiredFor or {}, src.requiredForTotal, QuestReqText)
     Draw(self.SectionQuestsScanning, src)
     Draw(self.SectionRows, "Dropped by", src.drops or {}, src.dropsTotal, NpcText)
