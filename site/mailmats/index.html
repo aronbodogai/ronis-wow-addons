@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roni's MailMats guide</title>
+<meta name="description" content="Roni's MailMats for WoW: Forever: send each alt the reagents, lockboxes, scrolls and gear it can use.">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="brand" href="../"><span>Roni's</span> One For All</a>
+  <nav class="top">
+    <a href="../">Home</a>
+    <a href="../itempedia/">ItemPedia</a>
+    <a href="./" aria-current="page">MailMats</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <h1>Roni's MailMats</h1>
+  <p class="lead">Open a mailbox and send each alt the things it can use, one click per alt.
+  MailMats only drafts the mail: nothing leaves until you press Send yourself.</p>
+
+  <figure>
+    <img src="../media/mailmats.gif" alt="The MailMats panel drafting a mail to an alt" loading="lazy" onerror="this.closest('figure').remove()">
+  </figure>
+
+  <nav class="toc"><strong>On this page</strong>
+    <ul>
+      <li><a href="#setup">Getting started</a></li>
+      <li><a href="#panel">The mailbox panel</a></li>
+      <li><a href="#keep">Keeping your own mats</a></li>
+      <li><a href="#extras">Lockboxes, scrolls, crates</a></li>
+      <li><a href="#gear">Gear upgrades and greens</a></li>
+      <li><a href="#recipients">Friends and guildies</a></li>
+      <li><a href="#groups">Groups window</a></li>
+      <li><a href="#messages">Mail messages</a></li>
+      <li><a href="#commands">Commands</a></li>
+      <li><a href="#faq">Good to know</a></li>
+    </ul>
+  </nav>
+
+  <h2 id="setup">Getting started</h2>
+  <p>Log in once on each of your characters. Every character remembers its professions and skill,
+  its class and the item level of the gear it wears. WoW: Forever characters have a first name and a
+  surname, and mail needs both, so MailMats stores the full name too.</p>
+  <p>Only characters on the same realm and faction are listed, since those are the ones you can mail.</p>
+
+  <h2 id="panel">The mailbox panel</h2>
+  <p>Opening a mailbox docks a panel to the right of the mail window with your other characters. Each
+  one gets a <strong>Send &lt;profession&gt; mats (N)</strong> button per crafting profession, where N
+  is how many matching stacks you carry. "Mats" for a profession are every item that any of its
+  recipes uses.</p>
+  <p>Clicking a button switches to the Send Mail tab, fills in the name and subject and attaches up to
+  12 stacks. Review the mail and press Send. If more stacks are left, click the button again after
+  sending. Hover a button first to see exactly what would go.</p>
+  <p>Soulbound and locked items are never attached.</p>
+
+  <h2 id="keep">Keeping your own mats</h2>
+  <p><strong>Keep mats for my own professions</strong> (on by default) never drafts items the
+  character you are playing uses itself. <strong>Choose</strong> picks which of your professions count.
+  By default the crafting professions, Lockpicking and Comprehension count, while Cooking, First Aid and
+  Poisons do not, so your Linen Cloth still reaches your tailor even though bandages use it too.</p>
+  <p>To keep one specific item out of every draft: <code>/mailmats ignore [item]</code>.</p>
+
+  <h2 id="extras">Lockboxes, scrolls and crates</h2>
+  <ul>
+    <li>Rogue alts with <strong>Lockpicking</strong> get a <strong>Send lockboxes</strong> button
+    (lockboxes, junkboxes, locked chests).</li>
+    <li>Mage alts with <strong>Comprehension</strong> get <strong>Send scrolls</strong> for the Forever
+    mage scrolls.</li>
+    <li>Items above the alt's current skill are marked "(needs N)" in the tooltip; they are still sent.</li>
+    <li><strong>Waylaid Supplies and Waylaid Crates</strong> go to the profession that fills them: cloth
+    crates to Tailoring, ore and bars to Mining, herbs to Alchemy, and so on.</li>
+  </ul>
+
+  <h2 id="gear">Gear upgrades and greens</h2>
+  <p>Gear in your bags that an alt can wear right now and that has a higher item level than what the
+  alt wears in that slot:</p>
+  <ul>
+    <li>gets a small mail icon on its bag slot (default bags and Bagnon),</li>
+    <li>says "Upgrade for &lt;alt&gt; (+N item level)" in its tooltip,</li>
+    <li>is drafted by that alt's <strong>Send upgrades</strong> button.</li>
+  </ul>
+  <p>"Can wear" checks level, the class's best armor type, weapon types the class can learn, and no
+  off-hand while it wields a two-hander. Only item level is compared, not stats. Bind-on-pickup and
+  soulbound items never count.</p>
+  <p><strong>BoE green weapons and armor</strong> that are no one's upgrade go to your enchanter to be
+  disenchanted (<code>/mailmats greens off</code> stops that). Greens mailed to another player ask
+  cash on delivery, 100% of the vendor price by default; the <strong>Greens COD</strong> button on
+  the panel changes the percentage.</p>
+
+  <h2 id="recipients">Friends and guildies</h2>
+  <p><strong>Add a recipient...</strong> on the panel adds anyone: a name and a tick box per thing they
+  want (any profession's mats, lockboxes, scrolls, your own groups). They get one
+  <strong>Send all to &lt;name&gt;</strong> button. Right-click it to change what they get; the
+  <strong>X</strong> removes them.</p>
+  <p>While you type, MailMats suggests friends, guild members, people you recently mailed and senders
+  in your inbox. A mage gets scrolls ticked and a rogue lockboxes when you pick them.</p>
+
+  <h2 id="groups">Groups window</h2>
+  <p>The minimap button (or <code>/mailmats groups</code>) opens every group with its items: each
+  profession's mats, lockboxes, scrolls and your own groups.</p>
+  <ul>
+    <li>Remove an item with its <strong>X</strong>; add one by dropping it on the window or typing its
+    ID, link or name.</li>
+    <li>Edited built-in groups turn gold and can be put back with <strong>Reset to default</strong>.</li>
+    <li><strong>New group</strong> makes a group of your own that you can give to recipients.</li>
+  </ul>
+
+  <h2 id="messages">Mail messages</h2>
+  <p>Every draft gets a short message in the mail body, picked from 100 in 20 tones (pirate, grumpy
+  dwarf, secret agent, cozy grandma, corporate memo...), with the recipient's name and what is sent
+  filled in. <strong>New message</strong> rolls another one. Anything you typed yourself is never
+  replaced. <code>/mailmats message off</code> turns them off.</p>
+
+  <h2 id="commands">Commands</h2>
+  <div class="table-scroll"><table>
+    <tr><th>Command</th><th>What it does</th></tr>
+    <tr><td><code>/mailmats</code></td><td>List your characters and their professions</td></tr>
+    <tr><td><code>/mailmats groups</code></td><td>Open the groups window</td></tr>
+    <tr><td><code>/mailmats minimap</code></td><td>Hide or show the minimap button</td></tr>
+    <tr><td><code>/mailmats forget First Last</code></td><td>Forget a character you deleted</td></tr>
+    <tr><td><code>/mailmats ignore [item]</code></td><td>Never draft this item (<code>unignore</code> undoes it, <code>ignored</code> lists them)</td></tr>
+    <tr><td><code>/mailmats target First Last: tailoring, scrolls</code></td><td>Add or change a recipient</td></tr>
+    <tr><td><code>/mailmats untarget First Last</code></td><td>Remove a recipient</td></tr>
+    <tr><td><code>/mailmats targets</code></td><td>List recipients</td></tr>
+    <tr><td><code>/mailmats cod 50</code></td><td>Cash on delivery for greens to other players, in % of vendor price (<code>off</code> to stop)</td></tr>
+    <tr><td><code>/mailmats greens off</code></td><td>Stop sending BoE greens to your enchanter (<code>on</code> again)</td></tr>
+    <tr><td><code>/mailmats message off</code></td><td>No messages in the mail body</td></tr>
+    <tr><td><code>/mailmats scan</code></td><td>Re-read this character's professions</td></tr>
+  </table></div>
+
+  <h2 id="faq">Good to know</h2>
+  <h3>An alt is missing from the panel</h3>
+  <p>Log in on it once. Alts on another realm or faction are never listed.</p>
+  <h3>An alt says "surname unknown"</h3>
+  <p>It was saved by an older version. Log in on it once and the full name is stored.</p>
+  <h3>Nothing was sent</h3>
+  <p>That is on purpose: MailMats only fills in the mail. Check it and press Send.</p>
+</main>
+
+<footer class="site"><div class="wrap">
+  Part of <a href="../">Roni's One For All</a>.
+  <a href="https://github.com/aronbodogai/ronis-wow-addons/issues">Report a problem</a>.
+</div></footer>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roni's ItemPedia guide</title>
+<meta name="description" content="Roni's ItemPedia for WoW: Forever: Alt-click any item for its recipes, drops, vendors and quests.">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <a class="brand" href="../"><span>Roni's</span> One For All</a>
+  <nav class="top">
+    <a href="../">Home</a>
+    <a href="./" aria-current="page">ItemPedia</a>
+    <a href="../mailmats/">MailMats</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <h1>Roni's ItemPedia</h1>
+  <p class="lead">Alt + Left-Click any item and a window opens with everything about it: what makes it,
+  what it makes, where it drops, who sells it and which quests want it.</p>
+
+  <figure>
+    <img src="../media/itempedia-open.gif" alt="Alt-clicking Linen Cloth opens the ItemPedia window" loading="lazy" onerror="this.closest('figure').remove()">
+  </figure>
+
+  <nav class="toc"><strong>On this page</strong>
+    <ul>
+      <li><a href="#open">Opening it</a></li>
+      <li><a href="#window">The window</a></li>
+      <li><a href="#recipes">Recipes</a></li>
+      <li><a href="#learn">Where to learn a recipe</a></li>
+      <li><a href="#sources">Where an item comes from</a></li>
+      <li><a href="#map">Map button</a></li>
+      <li><a href="#quests">Quests</a></li>
+      <li><a href="#properties">Properties and tooltip</a></li>
+      <li><a href="#commands">Commands</a></li>
+      <li><a href="#faq">Good to know</a></li>
+    </ul>
+  </nav>
+
+  <h2 id="open">Opening it</h2>
+  <p>Hold <kbd>Alt</kbd> and left-click an item almost anywhere: your bags and bank, the character
+  sheet, loot, vendor windows, chat links, quest rewards, auction rows, and bag addons like Bagnon.
+  Action bar buttons are skipped, because Alt-click there is self-cast.</p>
+  <p><code>/pedia</code> opens and closes the window without an item.</p>
+
+  <h2 id="window">The window</h2>
+  <p>On the left: a search box (name or item ID) and two tabs, <strong>Bags</strong> with everything you
+  carry and <strong>Recent</strong> with the items you looked at. On the right: the item, then its
+  sections.</p>
+  <p>Every icon in the window is clickable. Click a reagent to see where it drops, click a recipe's
+  product to see what it is used for, and so on. The arrows in the title bar, or your mouse's side
+  buttons, go back and forward. Drag the title bar to move the window.</p>
+
+  <h2 id="recipes">Recipes</h2>
+  <p>ItemPedia knows every profession recipe in WoW: Forever, read from the game client's own data,
+  so it does not matter which recipes you have opened or learned.</p>
+  <h3>Created by</h3>
+  <p>Every recipe that makes the item: profession, reagents and how many you get. Next to each recipe
+  are its skill levels in the profession window's colours:</p>
+  <div class="panel skill">
+    <p>Skill <span class="o">80</span> <span class="y">120</span> <span class="g">140</span> <span class="x">160</span></p>
+    <p class="muted">Orange: the skill you need to learn it. Yellow, green and grey: where skill-ups
+    start to become less likely. Most trainer recipes have no orange number, because the game's files
+    do not say when a trainer offers them.</p>
+  </div>
+  <p>Recipes your character already knows are marked <span style="color:#40ff40">(known)</span>.</p>
+  <h3>Used in</h3>
+  <p>Every recipe that uses the item, grouped by profession. Hover a recipe to see how many of the
+  item it needs.</p>
+  <h3>Teaches</h3>
+  <p>Patterns, plans, formulas and other recipe items show the recipe they teach.</p>
+
+  <figure>
+    <img src="../media/itempedia-recipes.gif" alt="Created by with skill levels and Learn from" loading="lazy" onerror="this.closest('figure').remove()">
+  </figure>
+
+  <h2 id="learn">Where to learn a recipe</h2>
+  <p>Under each recipe in Created by, <strong>Learn from</strong> says how you get it:</p>
+  <ul>
+    <li><strong>A recipe item</strong> (pattern, plan, formula...): its icon, which opens its own page,
+    and where to get it: the nearest vendor that sells it, how many mobs or objects drop it, or the
+    quest that rewards it.</li>
+    <li><strong>A trainer</strong>: the three nearest trainers of that profession for your faction,
+    with their title and distance. The nearest trainer may be too low a rank to teach a high-level
+    recipe.</li>
+    <li><strong>Automatically</strong>: some recipes come with the profession itself.</li>
+  </ul>
+
+  <h2 id="sources">Where an item comes from</h2>
+  <p>These sections use Questie's database:</p>
+  <ul>
+    <li><strong>Dropped by</strong>: mobs, with level, elite/rare/boss rank and zone.</li>
+    <li><strong>Contained in</strong>: clams, lockboxes, satchels and other items you open.</li>
+    <li><strong>Gathered from</strong>: herbs, ore veins and other objects.</li>
+    <li><strong>Sold by</strong>: vendors.</li>
+    <li><strong>Quest reward</strong>: quests that give it, with level, zone and quest giver.</li>
+  </ul>
+  <p>Lists are sorted by drop chance when it is known, then by distance from where you stand, nearest
+  first. Drop chances only exist for some items: Questie ships rates for quest-related drops.</p>
+
+  <h2 id="map">Map button</h2>
+  <p>Rows with a mob, vendor, object, trainer or quest giver have a map button on the right. Clicking
+  it pins every spawn on your map (with Questie) and opens the world map on the nearest one. The zone
+  and coordinates are also printed in chat.</p>
+  <figure>
+    <img src="../media/itempedia-map.gif" alt="The map button opens the world map at the nearest vendor" loading="lazy" onerror="this.closest('figure').remove()">
+  </figure>
+
+  <h2 id="quests">Quests</h2>
+  <p><strong>Required for quests</strong> lists every quest that asks for the item, either as an
+  objective (bring 10 Linen Cloth) or as something you must carry. Each row shows the quest level,
+  the level needed to take it, the zone and the quest giver, with a map button to the giver.</p>
+  <ul>
+    <li>Quests your faction cannot take are hidden.</li>
+    <li>Quests you already finished are greyed out, marked "(done)" and listed last.</li>
+    <li>Quests that start from an item have no map button.</li>
+  </ul>
+  <p>Questie has no "which quests need this item" list, so ItemPedia builds one by reading every quest
+  once, a few seconds after you log in. Until it finishes the section says "Scanning the quest
+  database...".</p>
+  <figure>
+    <img src="../media/itempedia-quests.gif" alt="Required for quests" loading="lazy" onerror="this.closest('figure').remove()">
+  </figure>
+
+  <h2 id="properties">Properties and tooltip</h2>
+  <p>At the bottom: quality, type, slot, item level, required level, stack size, binding, vendor price,
+  the Auctionator price when Auctionator is installed, how many you own (bags and bank) and the item
+  ID. Below that, the item's full tooltip.</p>
+
+  <h2 id="commands">Commands</h2>
+  <div class="table-scroll"><table>
+    <tr><th>Command</th><th>What it does</th></tr>
+    <tr><td><code>/pedia</code></td><td>Open or close the window (also <code>/ronipedia</code>)</td></tr>
+    <tr><td><code>/pedia 2589</code></td><td>Look up an item by ID</td></tr>
+    <tr><td><code>/pedia [item link]</code></td><td>Look up a linked item (shift-click it into the chat box)</td></tr>
+    <tr><td><code>/pedia reset</code></td><td>Put the window back in the middle of the screen</td></tr>
+  </table></div>
+
+  <h2 id="faq">Good to know</h2>
+  <h3>Most sections are empty</h3>
+  <p>Install Questie. Drops, vendors, objects, quests and map pins all come from its database.</p>
+  <h3>The map button does nothing in combat</h3>
+  <p>The game does not let addons open the world map during combat. Try again afterwards.</p>
+  <h3>An item says "Retrieving item info..."</h3>
+  <p>The game has not sent that item's details yet. It fills in after a moment.</p>
+  <h3>Distances are missing</h3>
+  <p>Distances only show for places on the continent you are on.</p>
+</main>
+
+<footer class="site"><div class="wrap">
+  Part of <a href="../">Roni's One For All</a>.
+  <a href="https://github.com/aronbodogai/ronis-wow-addons/issues">Report a problem</a>.
+</div></footer>
+</body>
+</html>
