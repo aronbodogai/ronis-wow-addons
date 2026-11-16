@@ -171,6 +171,12 @@ ItemSparse and Lock tables:
     # download ItemSparse and Lock CSVs from https://wago.tools/db2/<Table>/csv?build=<build>, then:
     node RonisMailMats/tools/gen_skill_items.js <csv-folder> <build> > RonisMailMats/Data/SkillItems.lua
 
+## Guides site
+
+`site/` is a plain HTML site (no build step) published to
+https://aronbodogai.github.io/ronis-wow-addons/ by `.github/workflows/pages.yml`
+on every push to main that touches it. GIFs go in `site/media/`.
+
 ## Releasing: Roni's One For All
 
 All addons ship together as one download, **Roni's One For All**: a zip with

@@ -10,6 +10,8 @@ turn off any of them in the AddOns list.
 
 **Made for WoW: Forever.** Type `/roni` in game to see what is installed.
 
+**Full guides:** [aronbodogai.github.io/ronis-wow-addons](https://aronbodogai.github.io/ronis-wow-addons/)
+
 Roni's ItemPedia
 ----------------
 

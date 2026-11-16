@@ -32,6 +32,13 @@ nameplates and chat spam hidden. Keep each GIF under about 5 MB.
 5. **MAILMATS**: open a mailbox with mats in your bags. Hover a Send button
    (tooltip lists the items), click it, the Send Mail tab fills in.
 
+## Guides site
+
+The same GIFs go in `site/media/` with these names: itempedia-open.gif (1),
+itempedia-recipes.gif (2), itempedia-map.gif (3), itempedia-quests.gif (4),
+mailmats.gif (5). Commit and push; the site redeploys by itself. Until a file
+exists its spot on the page stays hidden.
+
 ## Logo
 
 Square 400x400 PNG. Simplest fitting option: the book icon the addons use
