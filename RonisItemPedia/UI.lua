@@ -990,18 +990,33 @@ function UI:Render()
     if not ok or type(src) ~= "table" then
         src = { drops = {}, objects = {}, containers = {}, vendors = {}, quests = {} }
     end
-    y = self:SectionCreatedBy(id, y)
-    y = self:SectionTeaches(src, id, y)
-    y = self:SectionUsedIn(id, y)
-    y = self:SectionRows("Required for quests", src.requiredFor or {}, src.requiredForTotal, QuestReqText, y)
-    y = self:SectionQuestsScanning(src, y)
-    y = self:SectionRows("Dropped by", src.drops, src.dropsTotal, NpcText, y)
-    y = self:SectionContainers(src, y)
-    y = self:SectionRows("Gathered from", src.objects, src.objectsTotal, ObjectText, y)
-    y = self:SectionRows("Sold by", src.vendors, src.vendorsTotal, NpcText, y)
-    y = self:SectionRows("Quest reward", src.quests, src.questsTotal, QuestReqText, y)
-    y = self:SectionProperties(link, id, info, y)
-    y = self:SectionTooltip(full or link, y)
+    -- One broken section must not hide the ones after it: run each in pcall
+    -- and report the error once per item in chat.
+    local reported = false
+    local function Draw(fn, ...)
+        local n = select("#", ...)
+        local args = { ... }
+        args[n + 1] = y
+        local ok, res = pcall(fn, self, unpack(args, 1, n + 1))
+        if ok and type(res) == "number" then
+            y = res
+        elseif not ok and not reported then
+            reported = true
+            print("|cffff8c1aRoni's ItemPedia|r: could not draw part of item " .. tostring(id) .. ": " .. tostring(res))
+        end
+    end
+    Draw(self.SectionCreatedBy, id)
+    Draw(self.SectionTeaches, src, id)
+    Draw(self.SectionUsedIn, id)
+    Draw(self.SectionRows, "Required for quests", src.requiredFor or {}, src.requiredForTotal, QuestReqText)
+    Draw(self.SectionQuestsScanning, src)
+    Draw(self.SectionRows, "Dropped by", src.drops or {}, src.dropsTotal, NpcText)
+    Draw(self.SectionContainers, src)
+    Draw(self.SectionRows, "Gathered from", src.objects or {}, src.objectsTotal, ObjectText)
+    Draw(self.SectionRows, "Sold by", src.vendors or {}, src.vendorsTotal, NpcText)
+    Draw(self.SectionRows, "Quest reward", src.quests or {}, src.questsTotal, QuestReqText)
+    Draw(self.SectionProperties, link, id, info)
+    Draw(self.SectionTooltip, full or link)
     self.content:SetHeight(math.max(1, y))
     self:RefreshList()
 end
