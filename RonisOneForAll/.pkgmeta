@@ -1,0 +1,33 @@
+# Packaging for Roni's One For All (BigWigsMods/packager): one download with
+# every Roni's addon as its own folder.
+#
+# The repository root is the whole AddOns folder. The packager copies the repo
+# into .release/RonisOneForAll/ and move-folders lifts each addon folder out to
+# the top of the zip. The release workflow runs the packager with
+# `-m RonisOneForAll/.pkgmeta`; all paths here are relative to the repository
+# root. CurseForge and Wago project IDs come from RonisOneForAll.toc.
+#
+# Adding a new addon: add a move-folders line and a row in Hub.lua.
+
+package-as: RonisOneForAll
+
+enable-nolib-creation: no
+
+move-folders:
+  RonisOneForAll/RonisOneForAll: RonisOneForAll
+  RonisOneForAll/RonisItemPedia: RonisItemPedia
+  RonisOneForAll/RonisMailMats: RonisMailMats
+
+# Release notes shown on CurseForge / Wago (written by hand before tagging).
+manual-changelog:
+  filename: RonisOneForAll/CHANGELOG.md
+  markup-type: markdown
+
+# Repo files and developer tools players do not need
+ignore:
+  - README.md
+  - LICENSE
+  - RonisItemPedia/tools
+  - RonisMailMats/tools
+  - RonisMailMats/tests
+  - RonisOneForAll/docs

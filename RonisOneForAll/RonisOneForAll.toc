@@ -1,0 +1,10 @@
+## Interface: 16001
+## Title: |cffff8c1aRoni's|r One For All
+## Notes: Roni's addon collection. Type /roni to list the addons and their commands.
+## Author: Roni
+## Version: @project-version@
+## X-Curse-Project-ID: 1804431
+## X-Wago-ID: bGoYgo60
+## IconTexture: Interface\Icons\INV_Misc_Book_09
+
+Hub.lua

@@ -1,5 +1,8 @@
 # Roni's ItemPedia
 
+Released as part of Roni's One For All since v0.5.0 (see
+`RonisOneForAll/CHANGELOG.md`).
+
 ## v0.4.0
 
 - New **Required for quests** section: every quest that asks for the item,
