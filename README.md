@@ -83,6 +83,10 @@ Mails reagents to the alt who can use them.
     when there is something to send.
   Bind-on-pickup and soulbound items are never counted. Item level is the
   only measure; stats are not compared.
+  - Gear the alt can wear within a few levels counts too (default 3): its
+    tooltip says "Upgrade for <alt> at level N", and the Send upgrades
+    tooltip marks it "(level N)". `/mailmats ahead <levels>` changes how
+    far ahead to look; `/mailmats ahead 0` only counts gear wearable now.
 - **Other recipients** (friends, guildies, anyone): **Add a recipient...**
   on the panel opens an editor with a name and a checkbox per category
   (every profession's mats, lockboxes, scrolls). Each recipient gets one

@@ -928,4 +928,24 @@ return function(T)
         local S2 = MainAtMailbox(T.Logout(S))
         eq(CodButton(S2):GetText(), "Greens: no COD", "kept after relog")
     end)
+
+    -----------------------------------------------------------------------
+    -- Upgrades a few levels ahead
+    -----------------------------------------------------------------------
+    test("gear an alt can wear within a few levels counts as an upgrade", function()
+        local saved = T.Logout(T.Login({ name = "Wiz", class = "MAGE", level = 20, equipped = { [1] = 9002 } }))
+        local S = MainAtMailbox(saved, { bags = Bags({ { 9013, 1 } }) })
+        contains(S.ShowItemTooltip(9013), "Upgrade for Wiz at level 22 %(%+20 item level%)", "level-22 hood for a level-20 alt")
+        local up = T.Button(S, "upgrades")
+        eq(up:GetText(), "Send upgrades (1)", "offered")
+        up._scripts.OnEnter(up)
+        contains(S.env.GameTooltip._lines, "Next Level Hood.*%(level 22%)", "marked in the button tooltip")
+        S.Slash("/mailmats", "ahead 1")
+        local lines = table.concat(S.ShowItemTooltip(9013), " / ")
+        ok(not lines:find("Upgrade for"), "1 level ahead: too far: " .. lines)
+        S.Slash("/mailmats", "ahead 0")
+        contains(S.printLog, "only gear your alts can wear now", "ahead 0")
+        local S2 = MainAtMailbox(T.Logout(S), { bags = Bags({ { 9013, 1 } }) })
+        ok(not table.concat(S2.ShowItemTooltip(9013), " "):find("Upgrade for"), "setting kept after relog")
+    end)
 end

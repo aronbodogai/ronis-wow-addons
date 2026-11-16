@@ -49,6 +49,14 @@ local function ButtonTooltip(self)
             end
             local icon = GetItemIcon(id)
             local label = (icon and ("|T" .. icon .. ":14|t ") or "") .. (name or ("item " .. id))
+            if self.prof == ns.UPGRADES then
+                local _, link = GetItemInfo(id)
+                for _, up in ipairs(link and ns.UpgradesFor(link) or {}) do
+                    if up.alt == self.alt and up.at then
+                        label = label .. (" |cffa0d070(level %d)|r"):format(up.at)
+                    end
+                end
+            end
             local need = ns.SKILL_RANK[id]
             if need and skill and need > (skill.rank or 0) then
                 -- a lockbox or scroll the alt cannot open yet

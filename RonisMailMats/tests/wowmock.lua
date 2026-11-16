@@ -47,6 +47,7 @@ local ITEMS = {
     [9008] = { "Oak Staff", 2, 22, 10, "INVTYPE_2HWEAPON", 2, 10, 2 },
     [9009] = { "Spellbook", 2, 25, 10, "INVTYPE_HOLDABLE", 4, 0, 2 },
     [9010] = { "Green Axe", 2, 20, 15, "INVTYPE_WEAPON", 2, 0, 2 },
+    [9013] = { "Next Level Hood", 2, 30, 22, "INVTYPE_HEAD", 4, 1, 2 },
     [9011] = { "Bound Green Sword", 2, 20, 15, "INVTYPE_WEAPON", 2, 7, 1 },
     [9012] = { "White Sword", 1, 20, 15, "INVTYPE_WEAPON", 2, 7, 2 },
     [248705] = { "Waylaid Crate: Journeyman Fabrics", 1 }, [248682] = { "Waylaid Crate: Apprentice Herbs", 1 },

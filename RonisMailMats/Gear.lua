@@ -124,12 +124,24 @@ end
 -- Upgrade checks
 ---------------------------------------------------------------------------
 -- How much better `item` is for alt c (item level gained), or nil.
+-- How many levels ahead an item may be and still count (db.upgradeAhead,
+-- default 3): a level-18 item is worth mailing to a level-16 alt.
+function ns.UpgradeAhead()
+    local v = ns.db and ns.db.upgradeAhead
+    if v == nil then return 3 end
+    return v
+end
+
+-- Returns the item level gained and, for an item the alt cannot wear yet,
+-- the level it needs.
 local function Gain(c, d)
     if not (c.gear and c.class and d.equipLoc) then return nil end
     local slots = SLOTS[d.equipLoc]
     if not slots then return nil end
-    if d.minLevel > (c.level or 0) then return nil end
-    if not CanWear(c.class, c.level or 0, d.equipLoc, d.classID, d.subID) then return nil end
+    local level = c.level or 0
+    if d.minLevel > level + ns.UpgradeAhead() then return nil end
+    local wearAt = math.max(level, d.minLevel) -- armor type at the level it will be worn
+    if not CanWear(c.class, wearAt, d.equipLoc, d.classID, d.subID) then return nil end
     if OFF_HAND[d.equipLoc] and c.gear.twoHand then return nil end
     -- compare with the weakest of the slots it can go in (rings, trinkets)
     local worst
@@ -138,18 +150,20 @@ local function Gain(c, d)
         if not worst or v < worst then worst = v end
     end
     local gain = d.ilvl - worst
-    return gain > 0 and gain or nil
+    if gain <= 0 then return nil end
+    return gain, (d.minLevel > level) and d.minLevel or nil
 end
 
--- { {alt = name, gain = n}, ... } for every mailable alt the item upgrades.
+-- { {alt = name, gain = n, at = level or nil}, ... } for every mailable alt
+-- the item upgrades (`at`: the level it can be worn from, when not yet).
 function ns.UpgradesFor(item)
     if not (ns.db and item) then return {} end
     local d = ItemData(item)
     if not d or d.bindType == 1 then return {} end -- bind on pickup: cannot be mailed
     local out = {}
     for _, alt in ipairs(ns.Alts()) do
-        local gain = Gain(ns.db.chars[ns.realm][alt], d)
-        if gain then out[#out + 1] = { alt = alt, gain = gain } end
+        local gain, at = Gain(ns.db.chars[ns.realm][alt], d)
+        if gain then out[#out + 1] = { alt = alt, gain = gain, at = at } end
     end
     return out
 end
@@ -172,8 +186,13 @@ end
 local function AddTooltipLines(tt, link)
     if not link then return end
     for _, u in ipairs(ns.UpgradesFor(link)) do
-        tt:AddLine(("|T%s:14|t Upgrade for %s (+%d item level)"):format(ns.UPGRADE_ICON, u.alt, u.gain),
-            0.25, 1, 0.25)
+        if u.at then
+            tt:AddLine(("|T%s:14|t Upgrade for %s at level %d (+%d item level)"):format(ns.UPGRADE_ICON, u.alt, u.at, u.gain),
+                0.6, 0.9, 0.3)
+        else
+            tt:AddLine(("|T%s:14|t Upgrade for %s (+%d item level)"):format(ns.UPGRADE_ICON, u.alt, u.gain),
+                0.25, 1, 0.25)
+        end
     end
 end
 

@@ -906,6 +906,17 @@ SlashCmdList.RONISMAILMATS = function(msg)
         ns.Print(pct == 0 and "Greens are sent without cash on delivery."
             or ("Greens sent to other players ask %d%% of their vendor price as cash on delivery."):format(pct))
         if ns.Refresh then ns.Refresh() end
+    elseif cmd == "ahead" then
+        local n = tonumber(arg)
+        if n then
+            ns.db.upgradeAhead = math.max(0, math.min(20, math.floor(n)))
+        elseif arg ~= "" then
+            return ns.Print("Usage: /mailmats ahead <levels> (0 = only gear an alt can wear now)")
+        end
+        local v = ns.UpgradeAhead()
+        ns.Print(v == 0 and "Upgrades: only gear your alts can wear now."
+            or ("Upgrades: also gear your alts can wear within %d level(s)."):format(v))
+        if ns.Refresh then ns.Refresh() end
     elseif cmd == "greens" then
         if arg == "off" then ns.db.noGreens = true elseif arg == "on" then ns.db.noGreens = nil end
         ns.Print(ns.db.noGreens and "BoE green gear is no longer sent to enchanters. /mailmats greens on turns it back on."
@@ -946,7 +957,7 @@ SlashCmdList.RONISMAILMATS = function(msg)
         end
         ns.Print("/mailmats scan | selftest | forget <name> | ignore <item> | unignore <item> | ignored")
         ns.Print("/mailmats target <first last>: <category>, ... | untarget <first last> | targets")
-        ns.Print("/mailmats groups [group] | minimap")
+        ns.Print("/mailmats groups [group] | minimap | ahead <levels> | cod <percent>|off | greens on|off | message on|off")
     end
 end
 
