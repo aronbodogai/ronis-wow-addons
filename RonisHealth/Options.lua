@@ -162,7 +162,7 @@ local function Build()
         function(v) ns.db.sound = v end), nil, 22, 2)
     Row(Check(win, "Stop the clock while I am AFK", function() return ns.db.pauseAFK end,
         function(v) ns.db.pauseAFK = v end), nil, 22, 2)
-    Row(Check(win, "No reminders in dungeons and raids", function() return ns.db.quietInstances end,
+    Row(Check(win, "Hold reminders in dungeons and raids, sum up after", function() return ns.db.quietInstances end,
         function(v) ns.db.quietInstances = v end), nil, 22, 4)
     local snoozeLabel = Label(win, "GameFontHighlight", "Snooze:")
     snoozeLabel:SetPoint("TOPLEFT", win, "TOPLEFT", PAD, -y - 4)

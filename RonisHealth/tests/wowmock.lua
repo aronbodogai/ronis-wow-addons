@@ -9,7 +9,7 @@
 --   epoch  = wall clock (time()) at login, default 1800000000
 -- }
 -- Session controls: S.Advance(sec), S.Fire(event, ...), S.SetCombat(bool),
--- S.SetAFK(bool), S.SetInstance(kind or nil), S.Slash(cmd, msg).
+-- S.SetAFK(bool), S.SetInstance(kind or nil, name), S.Slash(cmd, msg).
 local mock = {}
 
 local function Builtins(S)
@@ -256,6 +256,10 @@ function mock.NewSession(opts)
         if S.instance then return true, S.instance end
         return false, "none"
     end
+    env.GetInstanceInfo = function()
+        if S.instance then return S.instanceName or "Test Dungeon", S.instance end
+        return "Elwynn Forest", "none"
+    end
     env.PlaySound = function(id) S.sounds[#S.sounds + 1] = id; return true end
     env.FlashClientIcon = function() S.flashes = S.flashes + 1 end
 
@@ -267,7 +271,7 @@ function mock.NewSession(opts)
         S.afk = v
         S.Fire("PLAYER_FLAGS_CHANGED", "player")
     end
-    function S.SetInstance(kind) S.instance = kind end
+    function S.SetInstance(kind, name) S.instance, S.instanceName = kind, name end
 
     -------------------------------------------------------------------------
     -- Loading

@@ -194,8 +194,15 @@ its own clock until you answer it.
   at the top of the screen; drag one to move them, **Reset position** in
   the options puts them back.
 - Due in combat: waits until combat ends (+3 s). A card open when a fight
-  starts hides and returns afterwards. **No reminders in dungeons and
-  raids** (off by default) holds them until you leave.
+  starts hides and returns afterwards.
+- **Dungeons and raids** (on by default, option "Hold reminders in dungeons
+  and raids, sum up after"): no cards pop up inside. The clocks keep
+  running and every interval that runs out counts as missed. On leaving,
+  one **Back from <instance>** card says how long you were in and what you
+  missed ("missed 2 eye breaks and 1 squat break"), with an **Eye break
+  now** / **Squat break now** button per missed reminder and **Dismiss**.
+  Missed reminders' clocks restart on leaving; a /reload inside keeps the
+  run. Missed breaks count in the stats.
 - A /reload or relog within 5 minutes keeps the countdowns; a longer
   break starts them fresh. Stats per day and all time (`/health stats`).
 

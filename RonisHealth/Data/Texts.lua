@@ -147,5 +147,21 @@ ns.TEXT.squat = {
     end,
 }
 
+-- Shown after leaving a dungeon or raid with "quiet in instances" on.
+local function Plural(n, one) return ("%d %s%s"):format(n, one, n == 1 and "" or "s") end
+
+ns.TEXT.summary = {
+    icon = "Interface\\Icons\\INV_Misc_PocketWatch_01",
+    Title = function(trip) return "Back from " .. trip.name end,
+    Action = function(trip)
+        local parts = {}
+        if (trip.missed.eye or 0) > 0 then parts[#parts + 1] = Plural(trip.missed.eye, "eye break") end
+        if (trip.missed.squat or 0) > 0 then parts[#parts + 1] = Plural(trip.missed.squat, "squat break") end
+        return ("You were inside for %s and missed %s."):format(
+            ns.Duration((trip.stop or time()) - trip.start), table.concat(parts, " and "))
+    end,
+    why = "No need to make them all up: one break now, after a long stretch of sitting and focusing, is what helps.",
+}
+
 ns.TEXT.disclaimer = GREY .. "General wellbeing suggestions, not medical advice. Pregnant, recovering from surgery or injury, "
     .. "or told to limit exercise? Ask your doctor or physio first, and pick Gentle or turn squats off." .. R

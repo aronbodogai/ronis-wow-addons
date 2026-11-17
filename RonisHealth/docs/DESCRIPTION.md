@@ -15,7 +15,10 @@ Small, honest reminders to look after yourself while you play.
 - Each reminder says in one line why it helps; **More** explains what the
   research actually shows, including its limits.
 - Never in the middle of a fight: reminders wait until combat ends. The
-  clock stops while you are AFK. Optional: no reminders in dungeons and raids.
+  clock stops while you are AFK.
+- No pop-ups inside dungeons and raids: when you come out, one card sums up
+  how long you were in and which breaks you missed, with a button to take
+  each one now.
 - Snooze, skip, pause for an hour, and see how many breaks you took today.
 
 Commands
