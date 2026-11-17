@@ -389,7 +389,10 @@ end
 
 -- An early break offered at a natural pause was turned down: nothing is
 -- counted and its regular clock keeps running.
-function ns.NotNow(kind) end
+-- For a few minutes after that, sitting down again does not offer it again.
+function ns.NotNow(kind)
+    ns.notNowUntil[kind] = GetTime() + ns.NOT_NOW_QUIET
+end
 
 ---------------------------------------------------------------------------
 -- Saved data

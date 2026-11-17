@@ -21,8 +21,8 @@ Small, honest reminders to look after yourself while you play.
   each one now.
 
   ![Back from Gnomeregan: missed 3 eye breaks and 2 squat breaks](https://aronbodogai.github.io/ronis-wow-addons/media/health-dungeon-summary.png)
-- **Natural pauses:** take a flight, sit at a campfire, lie on your
-  sleeping bag or sit down to eat, and a break that is nearly due (3/4 of
+- **Natural pauses:** take a flight, sit down, lie on your sleeping bag,
+  sit at a campfire or sit down to eat, and a break that is nearly due (3/4 of
   its time) comes early. The card says why it showed up now.
 - **Busy questing?** A break that comes due mid-pull waits for a calm
   moment, at most 5 minutes.

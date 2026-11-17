@@ -280,6 +280,59 @@ function mock.NewSession(opts)
     env.TaxiNodeName = function(i) return S.taxiNodes[i] and S.taxiNodes[i][1] end
     env.TaxiNodeGetType = function(i) return S.taxiNodes[i] and S.taxiNodes[i][2] end
     env.TakeTaxiNode = function() end
+    env.TaxiRequestEarlyLanding = function() end
+    env.GetTaxiMapID = function() return 1415 end
+    env.GetNumRoutes = function(slot) return S.taxiNodes[slot] and 1 or 0 end
+    env.TaxiGetNodeSlot = function(slot, hop, isSource) return isSource and 1 or slot end
+    S.nodeIDs = {}
+    local function NodeID(name)
+        if not S.nodeIDs[name] then
+            local n = 0
+            for _ in pairs(S.nodeIDs) do n = n + 1 end
+            S.nodeIDs[name] = n + 1
+        end
+        return S.nodeIDs[name]
+    end
+    env.C_TaxiMap = {
+        GetAllTaxiNodes = function()
+            local out = {}
+            for i, n in ipairs(S.taxiNodes) do
+                out[#out + 1] = { nodeID = NodeID(n[1]), name = n[1], slotIndex = i, position = n[3] }
+            end
+            return out
+        end,
+    }
+    -- one map unit = 10000 yards
+    env.C_Map = {
+        GetWorldPosFromMapPos = function(mapID, pos)
+            return 0, { x = pos.x * 10000, y = pos.y * 10000 }
+        end,
+    }
+
+    -- Sitting, moving, resting
+    S.speed, S.resting, S.mounted = 0, false, false
+    env.C_ChatInfo = { PerformEmote = function() end }
+    env.SitStandOrDescendStart = function() end
+    env.IsMounted = function() return S.mounted end
+    env.IsFlying = function() return false end
+    env.IsSwimming = function() return false end
+    env.IsFalling = function() return false end
+    env.GetUnitSpeed = function(u) return u == "player" and S.speed or 0 end
+    env.IsResting = function() return S.resting end
+    function S.Emote(token) env.C_ChatInfo.PerformEmote(token) end
+    function S.PressSit() env.SitStandOrDescendStart() end
+    function S.Move()
+        S.speed = 7
+        S.Fire("PLAYER_STARTED_MOVING")
+    end
+    function S.Stop()
+        S.speed = 0
+        S.Fire("PLAYER_STOPPED_MOVING")
+    end
+    function S.SetResting(v)
+        S.resting = v
+        S.Fire("PLAYER_UPDATE_RESTING")
+    end
     env.hooksecurefunc = function(a, b, c)
         local tbl, name, fn = env, a, b
         if type(a) == "table" then tbl, name, fn = a, b, c end
@@ -291,8 +344,11 @@ function mock.NewSession(opts)
         end
     end
     -- Take a flight from one node to another (the player picks it on the map).
-    function S.TakeFlight(from, to)
-        S.taxiNodes = { { from, "CURRENT" }, { to, "REACHABLE" } }
+    -- yards: straight-line length of the route (nil: no map positions)
+    function S.TakeFlight(from, to, yards)
+        local p1 = yards and { x = 0, y = 0 } or nil
+        local p2 = yards and { x = yards / 10000, y = 0 } or nil
+        S.taxiNodes = { { from, "CURRENT", p1 }, { to, "REACHABLE", p2 } }
         env.TakeTaxiNode(2)
         S.onTaxi = true
     end

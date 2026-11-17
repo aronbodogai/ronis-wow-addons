@@ -168,13 +168,15 @@ ns.TEXT.squat = {
 
 ---------------------------------------------------------------------------
 -- "Why now": one line on top of a card saying what brought it up.
--- ctx = { moment, window, flightKnown, early, elapsed, calm, forced, snoozed }
+-- ctx = { moment, window, estimated, early, elapsed, calm, forced, snoozed }
 ---------------------------------------------------------------------------
 local MOMENT = {
     flight = "You took a flight",
     campfire = "You sat down at the campfire",
     bedroll = "You lay down on your sleeping bag",
     food = "You sat down to eat or drink",
+    sit = "You sat down",
+    lie = "You lay down",
 }
 
 local BREAK_NAME = { eye = "eye break", squat = "squat break" }
@@ -185,7 +187,7 @@ function ns.WhyNow(kind, ctx)
     if ctx.moment then
         local s = MOMENT[ctx.moment] or "You are taking a pause"
         if ctx.moment == "flight" and ctx.window then
-            s = s .. (" (about %s last time)"):format(ns.Clock(ctx.window))
+            s = s .. (ctx.estimated and " (about %s by its length)" or " (about %s last time)"):format(ns.Clock(ctx.window))
         end
         s = s .. ": the game does not need you for a bit."
         if ctx.early and since then

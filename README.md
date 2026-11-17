@@ -205,11 +205,15 @@ its own clock until you answer it.
   run. Missed breaks count in the stats.
 - **Smart timing** (`Moments.lua`, each part can be switched off under
   Smart timing in the options):
-  - *Natural pauses*: boarding a flight (`UnitOnTaxi`), gaining a campfire
-    aura (Cozy Fire / Campfire / Camp Chair), the sleeping bag's
-    Well-Rested, or Food/Drink brings a break forward once 3/4 of its
+  - *Natural pauses*: boarding a flight (`UnitOnTaxi`); sitting down, caught
+    when it happens (no stand-state API exists, so: hooks on
+    `C_ChatInfo.PerformEmote` SIT/KNEEL/SLEEP and `SitStandOrDescendStart`,
+    not while mounted/flying/swimming; moving, STAND or combat clears it);
+    `IsResting()` switching on while standing still (the sleeping bag's
+    rested spot; ignored 15 s after a loading screen); and buffs: campfire
+    (Cozy Fire / Campfire / Camp Chair), Well-Rested, Food/Drink. This brings a break forward once 3/4 of its
     interval has passed. Early cards have **Not now** (clock untouched,
-    not a skip). Flights under 40 s (known routes) are ignored.
+    not a skip, no early offer of it for 5 min). Flights under 40 s are ignored.
   - *Calm moments*: a break due right after a fight or quest turn-in waits
     until you have been calm for 10 s + 5 s per fight/turn-in in the last
     5 minutes (max 45 s), but never more than 5 minutes past due.
@@ -220,8 +224,12 @@ its own clock until you answer it.
     done steps it up (+1 bottom, +1.5 top: 9-12, 10-13, top capped at 25);
     a week with more skips than breaks steps it down. Choosing a level or
     reps starts over.
-  - *Reps fit the flight*: flight times are learned per route (both
-    directions share one entry, `RonisHealthDB.flights`). With ~15 s to
+  - *Reps fit the flight*: flight times are learned per route and direction
+    by taxi node ID (`RonisHealthDB.flights`, like InFlight; early landings
+    and loading screens are not recorded). A new route is estimated as
+    straight-line hop yards (`C_TaxiMap.GetAllTaxiNodes` positions via
+    `C_Map.GetWorldPosFromMapPos`) / 22 yd/s + 5 s per hop; the speed
+    calibrates after each flight (`RonisHealthDB.taxiSpeed`). With ~15 s to
     stand up and the move's pace (2-5 s/rep), a flight with room for two
     full sets and 30 s rest gets 2 x top; otherwise one set.
 - A /reload or relog within 5 minutes keeps the countdowns; a longer

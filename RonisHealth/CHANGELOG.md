@@ -2,10 +2,12 @@
 
 ## Unreleased
 
-- **Natural pauses:** taking a flight, sitting at a campfire, lying on a
-  sleeping bag (Well-Rested) or sitting down to eat or drink brings a break
-  forward once 3/4 of its interval has passed. An early card has **Not now**,
-  which leaves the regular clock alone.
+- **Natural pauses:** taking a flight, sitting down (/sit, /kneel, /sleep or
+  the sit key), lying on a sleeping bag, sitting at a campfire or sitting
+  down to eat or drink brings a break forward once 3/4 of its interval has
+  passed. Sitting is caught the moment it happens; the sleeping bag by its
+  rested spot switching on while you stand still. An early card has **Not now**,
+  which leaves the regular clock alone and is not offered again for 5 minutes.
 - **Calm moments:** a break that comes due while you are fighting and
   handing in quests waits until you have been out of combat for a bit
   (longer the busier you were), at most 5 minutes.
@@ -13,8 +15,10 @@
 - **Weekly progression:** squats show a range (8-10 at Standard). Each week
   with 5+ breaks and few skips adds to it (9-12, 10-13, ...); a week of
   mostly skips steps it back. Picking a level or rep count starts over.
-- **Reps fit the flight:** flight times are learned per route; a long
-  flight gets two rounds, a short one a single set, flights under 40 s none.
+- **Reps fit the flight:** flight times are learned per route and direction
+  (by node ID). A route flown for the first time is estimated from its
+  length (22 yd/s to start, calibrated after each flight). A long flight
+  gets two rounds, a short one a single set, flights under 40 s none.
 - Options: a Smart timing section to switch each of these off.
 
 ## v0.2.0
