@@ -1,0 +1,34 @@
+name: Test Roni's Health
+
+# Runs the offline test suite (RonisHealth/tests) on every push and pull
+# request that touches the addon.
+
+on:
+  push:
+    paths:
+      - 'RonisHealth/**'
+      - '.github/workflows/test-health.yml'
+  pull_request:
+    paths:
+      - 'RonisHealth/**'
+      - '.github/workflows/test-health.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: RonisHealth/tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm test
+        env:
+          REFRESH_API: '1' # always check against the current Forever API dump

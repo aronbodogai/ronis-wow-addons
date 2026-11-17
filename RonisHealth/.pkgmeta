@@ -1,0 +1,30 @@
+# Packaging for Roni's Health (BigWigsMods/packager).
+#
+# The repository root is the whole AddOns folder, so the packager copies the
+# repo into .release/RonisHealth/. move-folders lifts the addon's own files
+# to the top of that folder and `ignore` drops everything else. The release
+# workflow runs the packager with `-m RonisHealth/.pkgmeta`; all paths here
+# are relative to the repository root. CurseForge and Wago project IDs come
+# from RonisHealth.toc.
+
+package-as: RonisHealth
+
+enable-nolib-creation: no
+
+move-folders:
+  RonisHealth/RonisHealth: RonisHealth
+
+# Release notes shown on CurseForge / Wago (written by hand before tagging).
+manual-changelog:
+  filename: RonisHealth/CHANGELOG.md
+  markup-type: markdown
+
+# Everything that is not this addon, and developer tools players do not need
+ignore:
+  - README.md
+  - LICENSE
+  - site
+  - RonisItemPedia
+  - RonisMailMats
+  - RonisHealth/tests
+  - RonisHealth/docs

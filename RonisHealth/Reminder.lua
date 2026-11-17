@@ -1,0 +1,256 @@
+-- Roni's Health - the reminder window: a small card at the top of the screen
+-- with what to do, one line on why, and "More" for the longer explanation.
+local ADDON, ns = ...
+
+local WIDTH, PAD, ICON = 400, 12, 36
+local TEXT_W = WIDTH - PAD * 3 - ICON
+local EYE_SECONDS = 20
+
+local cards = {}
+
+local function Sound(name, fallback)
+    if not ns.db.sound or not PlaySound then return end
+    local id = (SOUNDKIT and SOUNDKIT[name]) or fallback
+    pcall(PlaySound, id, "Master")
+end
+
+---------------------------------------------------------------------------
+-- Stack: cards hang below a movable anchor, in the order they appeared
+---------------------------------------------------------------------------
+local anchor = CreateFrame("Frame", "RonisHealthAnchor", UIParent)
+anchor:SetSize(WIDTH, 1)
+anchor:SetMovable(true)
+anchor:SetClampedToScreen(true)
+
+local function PlaceAnchor()
+    anchor:ClearAllPoints()
+    local p = ns.db.pos
+    if p then
+        anchor:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", p.x, p.y)
+    else
+        anchor:SetPoint("TOP", UIParent, "TOP", 0, -110)
+    end
+end
+
+local order = {}
+
+local function Restack()
+    local y = 0
+    for _, kind in ipairs(order) do
+        local c = cards[kind]
+        c:ClearAllPoints()
+        c:SetPoint("TOP", anchor, "TOP", 0, -y)
+        y = y + c:GetHeight() + 6
+    end
+end
+
+local function StartDrag(card)
+    anchor:StartMoving()
+    card.dragging = true
+end
+
+local function StopDrag(card)
+    if not card.dragging then return end
+    card.dragging = nil
+    anchor:StopMovingOrSizing()
+    local left, top = anchor:GetLeft(), anchor:GetTop()
+    if left and top then ns.db.pos = { x = left, y = top } end
+    PlaceAnchor()
+    Restack()
+end
+
+---------------------------------------------------------------------------
+-- Card
+---------------------------------------------------------------------------
+local function Text(card, font)
+    local fs = card:CreateFontString(nil, "OVERLAY", font)
+    fs:SetWidth(TEXT_W)
+    fs:SetJustifyH("LEFT")
+    fs:SetJustifyV("TOP")
+    fs:SetWordWrap(true)
+    return fs
+end
+
+local function Button(card, label, width, onClick)
+    local b = CreateFrame("Button", nil, card, "UIPanelButtonTemplate")
+    b:SetSize(width, 22)
+    b:SetText(label)
+    b:SetScript("OnClick", onClick)
+    return b
+end
+
+-- Lay the texts out top to bottom and size the card to fit.
+local function Layout(card)
+    local x = PAD * 2 + ICON
+    local y = PAD
+    local function Put(fs, gap)
+        fs:ClearAllPoints()
+        fs:SetPoint("TOPLEFT", card, "TOPLEFT", x, -y)
+        y = y + fs:GetStringHeight() + (gap or 4)
+    end
+    Put(card.title, 6)
+    Put(card.action, 6)
+    Put(card.why, 8)
+    if card.expanded then
+        card.more:Show()
+        Put(card.more, 8)
+    else
+        card.more:Hide()
+    end
+    y = math.max(y, PAD + ICON + 8)
+    local bx = PAD
+    for _, b in ipairs(card.buttons) do
+        b:ClearAllPoints()
+        b:SetPoint("TOPLEFT", card, "TOPLEFT", bx, -y)
+        bx = bx + b:GetWidth() + 6
+    end
+    card:SetHeight(y + 22 + PAD)
+    Restack()
+end
+
+local function Close(card)
+    card.countdown = nil
+    card:Hide()
+    for i, k in ipairs(order) do
+        if k == card.kind then table.remove(order, i) break end
+    end
+    Restack()
+end
+
+local function FinishEye(card)
+    Sound("READY_CHECK", 8960)
+    ns.Done("eye")
+    Close(card)
+end
+
+-- The eye card counts its 20 seconds down on the main button.
+local function CountDown(card, token)
+    if card.countdown ~= token or not card:IsShown() then return end
+    card.remaining = card.remaining - 1
+    if card.remaining <= 0 then
+        card.countdown = nil
+        FinishEye(card)
+        return
+    end
+    card.primary:SetText(("Look away... %d"):format(card.remaining))
+    C_Timer.After(1, function() CountDown(card, token) end)
+end
+
+local function Primary(card)
+    if card.kind == "eye" then
+        if card.countdown then return end
+        card.countdown = {}
+        card.remaining = EYE_SECONDS
+        card.primary:SetText(("Look away... %d"):format(card.remaining))
+        card.primary:Disable()
+        local token = card.countdown
+        C_Timer.After(1, function() CountDown(card, token) end)
+    else
+        ns.Done("squat")
+        Close(card)
+    end
+end
+
+local function Build(kind)
+    local card = CreateFrame("Frame", "RonisHealthCard_" .. kind, UIParent, "BackdropTemplate")
+    card.kind = kind
+    card:SetWidth(WIDTH)
+    card:SetFrameStrata("DIALOG")
+    card:SetClampedToScreen(true)
+    card:EnableMouse(true)
+    card:RegisterForDrag("LeftButton")
+    card:SetScript("OnDragStart", StartDrag)
+    card:SetScript("OnDragStop", StopDrag)
+    card:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = false, edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 },
+    })
+    card:SetBackdropColor(0.05, 0.07, 0.06, 0.95)
+    card:SetBackdropBorderColor(0.31, 0.82, 0.55, 1)
+
+    local icon = card:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(ICON, ICON)
+    icon:SetPoint("TOPLEFT", card, "TOPLEFT", PAD, -PAD)
+    icon:SetTexture(ns.TEXT[kind].icon)
+    card.icon = icon
+
+    card.title = Text(card, "GameFontNormalLarge")
+    card.action = Text(card, "GameFontHighlight")
+    card.why = Text(card, "GameFontDisableSmall")
+    card.more = Text(card, "GameFontHighlightSmall")
+
+    card.primary = Button(card, "", 132, function() Primary(card) end)
+    card.snooze = Button(card, "Snooze", 70, function()
+        ns.Snooze(kind)
+        Close(card)
+    end)
+    card.skip = Button(card, "Skip", 56, function()
+        ns.Skip(kind)
+        Close(card)
+    end)
+    card.moreButton = Button(card, "More", 64, function()
+        card.expanded = not card.expanded
+        card.moreButton:SetText(card.expanded and "Less" or "More")
+        Layout(card)
+    end)
+    card.buttons = { card.primary, card.snooze, card.skip, card.moreButton }
+
+    card:Hide()
+    cards[kind] = card
+    return card
+end
+
+-- Fill a card with the current settings' texts.
+local function Fill(card)
+    local T = ns.TEXT[card.kind]
+    card.title:SetText(T.Title(ns.db))
+    card.action:SetText(T.Action(ns.db))
+    card.why:SetText(T.why)
+    card.more:SetText(T.More(ns.db))
+    card.icon:SetTexture(T.icon)
+    card.primary:Enable()
+    card.primary:SetText(card.kind == "eye" and "Start 20 s" or "Done")
+    card.snooze:SetText(("Snooze %d min"):format(ns.db.snooze))
+    card.snooze:SetWidth(card.snooze:GetText():len() * 6 + 20)
+end
+
+---------------------------------------------------------------------------
+-- API used by the core
+---------------------------------------------------------------------------
+function ns.Showing(kind)
+    local c = cards[kind]
+    return c and c:IsShown() or false
+end
+
+function ns.ShowReminder(kind)
+    if not anchor.placed then
+        PlaceAnchor()
+        anchor.placed = true
+    end
+    local card = cards[kind] or Build(kind)
+    if card:IsShown() then return end
+    card.expanded = false
+    card.countdown = nil
+    card.moreButton:SetText("More")
+    Fill(card)
+    card:Show()
+    order[#order + 1] = kind
+    Layout(card)
+    Sound("TELL_MESSAGE", 3081)
+    if FlashClientIcon then FlashClientIcon() end
+end
+
+function ns.HideReminder(kind)
+    local c = cards[kind]
+    if c and c:IsShown() then Close(c) end
+end
+
+function ns.Card(kind) return cards[kind] end
+
+function ns.ResetPosition()
+    ns.db.pos = nil
+    PlaceAnchor()
+    Restack()
+end

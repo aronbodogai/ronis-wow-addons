@@ -25,5 +25,6 @@ ignore:
   - LICENSE
   - site
   - RonisMailMats
+  - RonisHealth
   - RonisItemPedia/tools
   - RonisItemPedia/docs

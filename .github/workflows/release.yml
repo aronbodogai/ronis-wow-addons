@@ -4,6 +4,7 @@ name: Release
 #
 #   git tag itempedia-v0.6.0 && git push origin itempedia-v0.6.0
 #   git tag mailmats-v0.12.0 && git push origin mailmats-v0.12.0
+#   git tag health-v0.1.0 && git push origin health-v0.1.0
 #
 # The version shown in game and on CurseForge / Wago is the part after the
 # prefix (v0.6.0). Before tagging, add a "## vX.Y.Z" section to the addon's
@@ -21,12 +22,13 @@ on:
     tags:
       - 'itempedia-v*'
       - 'mailmats-v*'
+      - 'health-v*'
   workflow_dispatch:
     inputs:
       addon:
         description: Addon to build
         type: choice
-        options: [itempedia, mailmats]
+        options: [itempedia, mailmats, health]
 
 permissions:
   contents: read
@@ -52,6 +54,7 @@ jobs:
           case $key in
             itempedia) folder=RonisItemPedia ;;
             mailmats) folder=RonisMailMats ;;
+            health) folder=RonisHealth ;;
             *) echo "::error::unknown addon '$key'"; exit 1 ;;
           esac
           echo "folder=$folder" >> "$GITHUB_OUTPUT"

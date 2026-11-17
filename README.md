@@ -175,6 +175,46 @@ ItemSparse and Lock tables:
     # download ItemSparse and Lock CSVs from https://wago.tools/db2/<Table>/csv?build=<build>, then:
     node RonisMailMats/tools/gen_skill_items.js <csv-folder> <build> > RonisMailMats/Data/SkillItems.lua
 
+## RonisHealth — "Roni's Health"
+
+Break reminders while you play. Timers count play time only: they stop
+while you are flagged AFK (option) or paused, and an open reminder stops
+its own clock until you answer it.
+
+- **Eye breaks (20-20-20)**, every 20 minutes (10–60): look at something
+  at least 6 m (20 ft) away for 20 seconds, then a few slow, full blinks.
+  **Start 20 s** counts the break down on the card and counts it as done.
+  Coming back from 5+ minutes AFK restarts the eye timer.
+- **Squat breaks**, every 40 minutes (20–90): a level sets the move and reps
+  (Gentle: 5 chair stands; Standard: 10 squats; Strong: 15 squats; Athletic:
+  20 slow squats); the move (calf raises, supported mini-squats, chair
+  stands, squats, slow squats) and reps (5–20) can then be changed.
+- Each card: title, what to do, a one-line reason, **More** for the longer
+  explanation (`Data/Texts.lua`), and Start/Done, Snooze, Skip. Cards stack
+  at the top of the screen; drag one to move them, **Reset position** in
+  the options puts them back.
+- Due in combat: waits until combat ends (+3 s). A card open when a fight
+  starts hides and returns afterwards. **No reminders in dungeons and
+  raids** (off by default) holds them until you leave.
+- A /reload or relog within 5 minutes keeps the countdowns; a longer
+  break starts them fresh. Stats per day and all time (`/health stats`).
+
+Commands: `/health` options, `/health eye|squat` show now, `/health pause
+<minutes>`, `/health resume`, `/health status`, `/health stats`.
+
+Texts follow the research behind the addon and avoid claims stronger than
+it supports: the 20-20-20 rule is recommended by the AOA and AAO but its
+evidence is modest (Talens-Estarelles et al. 2023, Contact Lens & Anterior
+Eye, doi:10.1016/j.clae.2022.101744; Johnson & Rosenfield 2023, Optom Vis
+Sci 100(1):52); "blink 20 times" has no source, so the card asks for a few
+complete blinks. Squat breaks are based on small one-day lab trials of
+3-minute bouts every 20–45 minutes (Dempsey et al. 2016, Diabetes Care,
+doi:10.2337/dc15-2336; Dunstan et al. 2012; Thosar et al. 2015) and the
+WHO 2020 guidance to replace sitting with activity of any intensity; the
+levels are chosen by effort, not age or weight (NHS strength exercises,
+ACSM/AHA). Tests: `cd RonisHealth/tests && npm install && npm test`
+(same harness as MailMats, `.github/workflows/test-health.yml`).
+
 ## Guides site
 
 `site/` is a plain HTML site (no build step) published to
@@ -189,7 +229,7 @@ built by `.github/workflows/release.yml` with the BigWigsMods packager
 
 1. Add a `## vX.Y.Z` section to the addon's `CHANGELOG.md`.
 2. `git tag itempedia-vX.Y.Z && git push origin itempedia-vX.Y.Z`
-   (or `mailmats-vX.Y.Z`)
+   (or `mailmats-vX.Y.Z`, `health-vX.Y.Z`)
 
 The version in game and on the project pages is the part after the prefix.
 Uploads need the `CF_API_KEY` / `WAGO_API_TOKEN` repository secrets and the

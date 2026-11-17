@@ -1,0 +1,12 @@
+## Interface: 16001
+## Title: |cffff8c1aRoni's|r Health
+## Notes: Gentle reminders for eye breaks (20-20-20) and squat breaks while you play.
+## Author: Roni
+## Version: @project-version@
+## SavedVariables: RonisHealthDB
+## IconTexture: Interface\Icons\Spell_Holy_MindVision
+
+Data\Texts.lua
+Core.lua
+Reminder.lua
+Options.lua
