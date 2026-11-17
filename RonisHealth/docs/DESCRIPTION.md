@@ -5,7 +5,7 @@ Small, honest reminders to look after yourself while you play.
 
 **Made for WoW: Forever.**
 
-**Works better with OneForAll**
+**Works better with [OneForAll](https://www.curseforge.com/wow/addons/oneforall-forever)**
 (optional): Roni's Health reads its flight times to size squat breaks on
 flights. Without it, flight times are estimated from the route's length.
 

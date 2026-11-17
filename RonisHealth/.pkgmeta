@@ -28,3 +28,8 @@ ignore:
   - RonisMailMats
   - RonisHealth/tests
   - RonisHealth/docs
+
+# Shown as relations on CurseForge (project slugs). OneForAll gives flight
+# times; without it they are estimated from the route length.
+optional-dependencies:
+  - oneforall-forever
