@@ -1,6 +1,6 @@
 # Roni's MailMats
 
-## Unreleased
+## v0.12.0
 
 First release as its own addon. Until now MailMats was only available inside
 the "Roni's One For All" bundle (v0.5.0).
