@@ -63,7 +63,7 @@ jobs:
             # prefixed tag for a local, unprefixed one so the toc and the
             # upload say "v0.6.0" instead of "itempedia-v0.6.0".
             git tag --points-at HEAD | xargs -r git tag -d
-            git tag "$version"
+            git tag -f "$version" # an old unprefixed tag of that name may exist
             echo "Releasing $folder $version"
           fi
 
