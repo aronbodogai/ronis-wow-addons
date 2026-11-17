@@ -21,6 +21,14 @@ Small, honest reminders to look after yourself while you play.
   each one now.
 
   ![Back from Gnomeregan: missed 3 eye breaks and 2 squat breaks](https://aronbodogai.github.io/ronis-wow-addons/media/health-dungeon-summary.png)
+- **Natural pauses:** take a flight, sit at a campfire, lie on your
+  sleeping bag or sit down to eat, and a break that is nearly due (3/4 of
+  its time) comes early. The card says why it showed up now.
+- **Busy questing?** A break that comes due mid-pull waits for a calm
+  moment, at most 5 minutes.
+- **Squats that grow with you:** start at 8-10, and each week you keep up
+  the range goes up a little (9-12, 10-13, ...). On a flight the reps fit
+  the flight: a 3-minute flight gets two rounds, a 1-minute one a single set.
 - Snooze, skip, pause for an hour, and see how many breaks you took today.
 
 Commands

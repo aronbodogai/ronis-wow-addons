@@ -273,6 +273,42 @@ function mock.NewSession(opts)
     end
     function S.SetInstance(kind, name) S.instance, S.instanceName = kind, name end
 
+    -- Flight paths: S.taxiNodes = { {name, type}, ... } at the flight master.
+    S.onTaxi, S.taxiNodes, S.auras = false, {}, {}
+    env.UnitOnTaxi = function(u) return u == "player" and S.onTaxi end
+    env.NumTaxiNodes = function() return #S.taxiNodes end
+    env.TaxiNodeName = function(i) return S.taxiNodes[i] and S.taxiNodes[i][1] end
+    env.TaxiNodeGetType = function(i) return S.taxiNodes[i] and S.taxiNodes[i][2] end
+    env.TakeTaxiNode = function() end
+    env.hooksecurefunc = function(a, b, c)
+        local tbl, name, fn = env, a, b
+        if type(a) == "table" then tbl, name, fn = a, b, c end
+        local old = tbl[name]
+        tbl[name] = function(...)
+            local r = { old(...) }
+            fn(...)
+            return table.unpack(r)
+        end
+    end
+    -- Take a flight from one node to another (the player picks it on the map).
+    function S.TakeFlight(from, to)
+        S.taxiNodes = { { from, "CURRENT" }, { to, "REACHABLE" } }
+        env.TakeTaxiNode(2)
+        S.onTaxi = true
+    end
+    function S.Land() S.onTaxi = false end
+
+    -- Buffs on the player: S.SetAuras({ "Cozy Fire", ... })
+    env.C_UnitAuras = {
+        GetAuraDataByIndex = function(unit, i)
+            local name = unit == "player" and S.auras[i]
+            if name then return { name = name, spellId = 1000 + i } end
+            return nil
+        end,
+    }
+    function S.SetAuras(list) S.auras = list or {} end
+    function S.TurnInQuest() S.Fire("QUEST_TURNED_IN", 1, 0, 0) end
+
     -------------------------------------------------------------------------
     -- Loading
     -------------------------------------------------------------------------

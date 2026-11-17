@@ -1,5 +1,22 @@
 # Roni's Health
 
+## Unreleased
+
+- **Natural pauses:** taking a flight, sitting at a campfire, lying on a
+  sleeping bag (Well-Rested) or sitting down to eat or drink brings a break
+  forward once 3/4 of its interval has passed. An early card has **Not now**,
+  which leaves the regular clock alone.
+- **Calm moments:** a break that comes due while you are fighting and
+  handing in quests waits until you have been out of combat for a bit
+  (longer the busier you were), at most 5 minutes.
+- **Why now:** every card starts with one line on what brought it up.
+- **Weekly progression:** squats show a range (8-10 at Standard). Each week
+  with 5+ breaks and few skips adds to it (9-12, 10-13, ...); a week of
+  mostly skips steps it back. Picking a level or rep count starts over.
+- **Reps fit the flight:** flight times are learned per route; a long
+  flight gets two rounds, a short one a single set, flights under 40 s none.
+- Options: a Smart timing section to switch each of these off.
+
 ## v0.2.0
 
 - **Dungeon and raid summary:** reminders are held inside dungeons and

@@ -16,30 +16,35 @@ ns.MOVE_ORDER = { "calf", "mini", "chair", "squat", "slow" }
 ns.MOVES = {
     calf = {
         name = "Calf raises",
+        pace = 2, -- seconds per rep, to fit reps into a flight
         unit = "calf raises",
         short = "No squat: stand holding your desk, rise onto your toes, lower slowly. For sore knees or a tight space.",
         how = "Stand holding your desk or a chair back. Rise slowly onto your toes, then lower your heels back down.",
     },
     mini = {
         name = "Supported mini-squats",
+        pace = 3, -- seconds per rep, to fit reps into a flight
         unit = "supported mini-squats",
         short = "Hands on a chair back or desk, bend your knees only as far as is comfortable.",
         how = "Rest your hands on a chair back or your desk. Bend your knees as far as is comfortable, keeping them in line with your toes, then come up squeezing your buttocks.",
     },
     chair = {
         name = "Chair stands",
+        pace = 3, -- seconds per rep, to fit reps into a flight
         unit = "chair stands",
         short = "Sit-to-stand from a sturdy chair without wheels. Stand up using your legs, then sit down slowly.",
         how = "Sit on the edge of a sturdy chair without wheels, feet hip-width apart. Lean slightly forward and stand up using your legs, then sit back down slowly.",
     },
     squat = {
         name = "Bodyweight squats",
+        pace = 3, -- seconds per rep, to fit reps into a flight
         unit = "squats",
         short = "Sit back and down as if onto a chair, go as low as is comfortable, push up through your whole foot.",
         how = "Feet hip- to shoulder-width apart. Sit back and down as if onto a chair, chest up, knees following your toes. Go as low as is comfortable and push up through your whole foot.",
     },
     slow = {
         name = "Slow squats",
+        pace = 5, -- seconds per rep, to fit reps into a flight
         unit = "slow squats (3 s down)",
         short = "Bodyweight squats taking about 3 seconds on the way down. For people who exercise regularly.",
         how = "A bodyweight squat, but take about 3 seconds on the way down and come up under control. Go only as deep as you can keep good form.",
@@ -112,11 +117,18 @@ ns.TEXT.eye = {
 ns.TEXT.squat = {
     name = "Squat breaks",
     icon = "Interface\\Icons\\Spell_Nature_Strength",
-    Title = function(db)
-        return ("Squat break: %d %s"):format(db.squat.reps, ns.MOVES[db.squat.move].unit)
+    Title = function(db, ctx)
+        local lo, hi, rounds = ns.RepsFor(ctx and ctx.window)
+        local unit = ns.MOVES[db.squat.move].unit
+        if rounds > 1 then return ("Squat break: %d x %d %s"):format(rounds, hi, unit) end
+        if lo == hi then return ("Squat break: %d %s"):format(hi, unit) end
+        return ("Squat break: %d-%d %s"):format(lo, hi, unit)
     end,
-    Action = function(db)
-        return ns.MOVES[db.squat.move].how .. " Stand up slowly first."
+    Action = function(db, ctx)
+        local _, _, rounds = ns.RepsFor(ctx and ctx.window)
+        local s = ns.MOVES[db.squat.move].how .. " Stand up slowly first."
+        if rounds > 1 then s = s .. " Rest about 30 seconds between the rounds." end
+        return s
     end,
     why = "Using your leg muscles between long stretches of sitting lowers blood sugar after meals and keeps blood flowing in your legs.",
     More = function()
@@ -134,6 +146,13 @@ ns.TEXT.squat = {
                 .. "says replacing sitting with activity of any intensity, even light, benefits health. Studies used breaks "
                 .. "every 20 to 45 minutes; 40 sits in that range, and shorter is fine too.",
             "",
+            H("Why the number grows"),
+            "With weekly progression on, the range goes up a little each week you keep up "
+                .. "(5 or more breaks, few skips): 8-10, then 9-12, then 10-13. Muscles adapt to a load "
+                .. "they are used to, so exercise guidelines raise it gradually (the ACSM's progression "
+                .. "principle). Skipping more than you do brings it back down; picking a level or rep count "
+                .. "starts over. On a flight the reps fit the flight: a long one gets two rounds.",
+            "",
             H("Good form"),
             "Knees follow your toes (passing your toes is fine). Back straight, chest up. Go only as low as is "
                 .. "comfortable. Breathe out on the way up; do not hold your breath. It should feel easy to moderate: you can still talk.",
@@ -146,6 +165,50 @@ ns.TEXT.squat = {
         }, "\n")
     end,
 }
+
+---------------------------------------------------------------------------
+-- "Why now": one line on top of a card saying what brought it up.
+-- ctx = { moment, window, flightKnown, early, elapsed, calm, forced, snoozed }
+---------------------------------------------------------------------------
+local MOMENT = {
+    flight = "You took a flight",
+    campfire = "You sat down at the campfire",
+    bedroll = "You lay down on your sleeping bag",
+    food = "You sat down to eat or drink",
+}
+
+local BREAK_NAME = { eye = "eye break", squat = "squat break" }
+
+function ns.WhyNow(kind, ctx)
+    if not ctx then return nil end
+    local since = ctx.elapsed and ns.Duration(ctx.elapsed)
+    if ctx.moment then
+        local s = MOMENT[ctx.moment] or "You are taking a pause"
+        if ctx.moment == "flight" and ctx.window then
+            s = s .. (" (about %s last time)"):format(ns.Clock(ctx.window))
+        end
+        s = s .. ": the game does not need you for a bit."
+        if ctx.early and since then
+            s = s .. (" %s since your last %s, so it comes a little early."):format(since, BREAK_NAME[kind])
+        end
+        return s
+    end
+    if ctx.forced then
+        return ("Due %s ago. You have been busy, so it waited as long as it could; a minute now still counts.")
+            :format(ns.Duration(ctx.forced))
+    end
+    if ctx.calm then
+        return "You were busy when this came due, so it waited for a calm moment."
+    end
+    if ctx.snoozed then return "You snoozed this one; time is up." end
+    if since then return ("%s of play since your last %s."):format(since, BREAK_NAME[kind]) end
+    return nil
+end
+
+ns.TEXT.timing = H("Why now?") .. "\n" .. "Cards come at natural pauses (flights, campfires, sleeping bags, eating) and wait "
+    .. "for a calm moment when you are busy, up to 5 minutes. Interruptions at a break point in a task are "
+    .. "less disruptive than in the middle of one (Adamczyk and Bailey, 2004), and linking a habit to a moment "
+    .. "that happens anyway helps it become automatic (Gardner, Lally and Wardle, 2012)."
 
 -- Shown after leaving a dungeon or raid with "quiet in instances" on.
 local function Plural(n, one) return ("%d %s%s"):format(n, one, n == 1 and "" or "s") end

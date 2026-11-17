@@ -28,7 +28,8 @@ return function(T)
         ok(T.Shown(S, "squat"), "squat card shown")
         local p = Card(S, "squat")._points[1]
         ok(p[5] < 0, "squat card placed below the eye card")
-        eq(Card(S, "squat").title:GetText(), "Squat break: 10 squats")
+        eq(Card(S, "squat").title:GetText(), "Squat break: 8-10 squats")
+        eq(Card(S, "squat").reason:GetText(), "40 min of play since your last squat break.")
     end)
 
     test("an open reminder stops its own clock until answered", function()
@@ -70,8 +71,8 @@ return function(T)
         Click(Card(S, "squat").primary)
         ok(not T.Shown(S, "squat"), "closed")
         eq(S.ns.db.stats.today.squat, 1)
-        eq(S.ns.db.stats.today.reps, 15)
-        eq(S.ns.db.stats.total.reps, 15)
+        eq(S.ns.db.stats.today.reps, 13, "the bottom of the 13-15 range")
+        eq(S.ns.db.stats.total.reps, 13)
     end)
 
     test("snooze brings the reminder back after the snooze time", function()
@@ -112,7 +113,10 @@ return function(T)
         contains(S.ns.StatusLines(), "waiting until combat ends")
         S.SetCombat(false)
         S.Advance(4)
-        ok(T.Shown(S, "eye"), "shown a few seconds after combat")
+        ok(not T.Shown(S, "eye"), "not right after the fight")
+        contains(S.ns.StatusLines(), "waiting for a calm moment")
+        S.Advance(12)
+        ok(T.Shown(S, "eye"), "shown once things are calm")
     end)
 
     test("an open card steps aside when a fight starts and returns after", function()
@@ -123,7 +127,7 @@ return function(T)
         ok(not T.Shown(S, "eye"), "hidden in combat")
         S.Advance(MIN)
         S.SetCombat(false)
-        S.Advance(4)
+        S.Advance(16)
         ok(T.Shown(S, "eye"), "back after combat")
     end)
 
@@ -353,7 +357,7 @@ return function(T)
         eq(S.ns.db.squat.move, "chair")
         ok(not gentle:IsEnabled(), "chosen level is greyed out")
         S.Slash("/health", "squat")
-        eq(Card(S, "squat").title:GetText(), "Squat break: 5 chair stands")
+        eq(Card(S, "squat").title:GetText(), "Squat break: 3-5 chair stands")
         S.Slash("/health", "")
         ok(not win:IsShown(), "toggled closed")
     end)
@@ -395,5 +399,194 @@ return function(T)
         end
         -- the eye card asks for a few full blinks, not a count of 20
         ok(not S.ns.TEXT.eye.Action(S.ns.db):find("20 times"), "no blink count")
+    end)
+
+    -----------------------------------------------------------------------
+    -- Smart timing: natural pauses, calm moments, weekly progression
+    -----------------------------------------------------------------------
+    test("a flight brings a squat break forward after 30 of its 40 minutes", function()
+        local S = T.Login({}, { RonisHealthDB = { eye = { enabled = false } } })
+        S.Advance(20 * MIN)
+        S.TakeFlight("Stormwind", "Sentinel Hill")
+        S.Advance(2)
+        ok(not T.Shown(S, "squat"), "too early at 20 min")
+        S.Land()
+        S.Advance(11 * MIN)
+        S.TakeFlight("Sentinel Hill", "Lakeshire")
+        S.Advance(2)
+        ok(T.Shown(S, "squat"), "offered on a flight at 31 min")
+        local c = Card(S, "squat")
+        contains({ c.reason:GetText() }, "You took a flight")
+        contains({ c.reason:GetText() }, "31 min since your last squat break")
+        eq(c.snooze:GetText(), "Not now", "an early card can be turned down")
+        ok(not c.skip:IsShown(), "no skip on an early card")
+        Click(c.snooze)
+        ok(not T.Shown(S, "squat"), "closed")
+        eq(S.ns.db.stats.today.skipped or 0, 0, "Not now is not a skip")
+        S.Land()
+        S.Advance(9 * MIN + 5)
+        ok(T.Shown(S, "squat"), "regular reminder still comes at 40 min")
+    end)
+
+    test("flight times are learned and set the reps: longer flight, more squats", function()
+        local S = T.Login({}, { RonisHealthDB = { eye = { enabled = false } } })
+        S.TakeFlight("Stormwind", "Lakeshire")
+        S.Advance(3 * MIN)
+        S.Land()
+        S.Advance(2)
+        eq(S.ns.db.flights["Lakeshire - Stormwind"], 180, "3 min route learned")
+        S.TakeFlight("Goldshire", "Stormwind")
+        S.Advance(60)
+        S.Land()
+        S.Advance(31 * MIN)
+        -- same route both ways: back from Lakeshire takes about 3 min
+        S.TakeFlight("Lakeshire", "Stormwind")
+        S.Advance(2)
+        local c = Card(S, "squat")
+        eq(c.title:GetText(), "Squat break: 2 x 10 squats", "two rounds on a 3 min flight")
+        contains({ c.reason:GetText() }, "about 3:00 last time")
+        Click(c.primary)
+        eq(S.ns.db.stats.today.reps, 20)
+        S.Land()
+        S.Advance(31 * MIN)
+        S.TakeFlight("Stormwind", "Goldshire")
+        S.Advance(2)
+        eq(Card(S, "squat").title:GetText(), "Squat break: 10 squats", "one round on a 1 min flight")
+    end)
+
+    test("very short known flights do not pop up a card", function()
+        local S = T.Login({}, { RonisHealthDB = { eye = { enabled = false }, flights = { ["A - B"] = 25 } } })
+        S.Advance(35 * MIN)
+        S.TakeFlight("A", "B")
+        S.Advance(2)
+        ok(not T.Shown(S, "squat"), "25 s flight skipped")
+    end)
+
+    test("campfire, sleeping bag and food say why the break came", function()
+        local cases = {
+            { "Cozy Fire", "You sat down at the campfire" },
+            { "Well-Rested", "You lay down on your sleeping bag" },
+            { "Food", "You sat down to eat or drink" },
+        }
+        for _, case in ipairs(cases) do
+            local S = T.Login()
+            S.Advance(16 * MIN)
+            S.SetAuras({ "Power Word: Fortitude", case[1] })
+            S.Advance(2)
+            ok(T.Shown(S, "eye"), case[1] .. ": eye break at 16 of 20 min")
+            ok(not T.Shown(S, "squat"), case[1] .. ": squat not near due")
+            contains({ Card(S, "eye").reason:GetText() }, case[2])
+        end
+    end)
+
+    test("an aura that stays on does not keep popping cards", function()
+        local S = T.Login()
+        S.Advance(16 * MIN)
+        S.SetAuras({ "Cozy Fire" })
+        S.Advance(2)
+        Click(Card(S, "eye").snooze) -- Not now
+        S.Advance(MIN)
+        ok(not T.Shown(S, "eye"), "not offered again while still at the fire")
+        eq(S.ns.AuraMoment("Fire Shield"), nil, "other fire buffs do not count")
+    end)
+
+    test("busy questing: a due break waits for a calm moment, at most 5 minutes", function()
+        local S = T.Login()
+        S.Advance(19 * MIN + 50)
+        -- fight after fight with quests in between
+        local shownAt
+        for i = 1, 14 do
+            S.SetCombat(true); S.Advance(15); S.SetCombat(false)
+            S.TurnInQuest()
+            S.Advance(10)
+            if T.Shown(S, "eye") then shownAt = i break end
+        end
+        ok(shownAt and shownAt >= 11, "held for about 5 minutes of fighting, shown at round " .. tostring(shownAt))
+        contains({ Card(S, "eye").reason:GetText() }, "You have been busy")
+    end)
+
+    test("a quiet stretch after a fight shows the waiting break with its reason", function()
+        local S = T.Login()
+        S.Advance(19 * MIN + 55)
+        S.SetCombat(true); S.Advance(30); S.SetCombat(false)
+        S.Advance(5)
+        ok(not T.Shown(S, "eye"), "waits after the fight")
+        S.Advance(15)
+        ok(T.Shown(S, "eye"), "shown when calm")
+        eq(Card(S, "eye").reason:GetText(), "You were busy when this came due, so it waited for a calm moment.")
+    end)
+
+    test("calm waiting can be turned off", function()
+        local S = T.Login({}, { RonisHealthDB = { smart = { calm = false } } })
+        S.Advance(19 * MIN + 55)
+        S.SetCombat(true); S.Advance(10); S.SetCombat(false)
+        S.Advance(4)
+        ok(T.Shown(S, "eye"), "right after combat like before")
+    end)
+
+    test("squat range grows week by week when you keep up, and drops when you skip", function()
+        local DAY = 24 * 3600
+        local S = T.Login()
+        local lo, hi = S.ns.RepRange()
+        eq(lo .. "-" .. hi, "8-10", "week 1")
+        for _ = 1, 5 do S.ns.Done("squat", 8) end
+        local saved = T.Logout(S)
+        S = T.Login({ epoch = 1800000000 + 7 * DAY + 60 }, saved)
+        lo, hi = S.ns.RepRange()
+        eq(lo .. "-" .. hi, "9-12", "week 2 after keeping up")
+        contains(S.printLog, "now 9%-12 squats")
+        for _ = 1, 5 do S.ns.Done("squat", 9) end
+        saved = T.Logout(S)
+        S = T.Login({ epoch = 1800000000 + 14 * DAY + 120 }, saved)
+        lo, hi = S.ns.RepRange()
+        eq(lo .. "-" .. hi, "10-13", "week 3")
+        S.ns.Done("squat", 10)
+        S.ns.Skip("squat"); S.ns.Skip("squat")
+        saved = T.Logout(S)
+        S = T.Login({ epoch = 1800000000 + 21 * DAY + 180 }, saved)
+        lo, hi = S.ns.RepRange()
+        eq(lo .. "-" .. hi, "9-12", "back down after a week of skipping")
+        S.ns.SetLevel("standard")
+        lo, hi = S.ns.RepRange()
+        eq(lo .. "-" .. hi, "8-10", "picking a level starts over")
+    end)
+
+    test("a quiet week keeps the range; progression off shows a single number", function()
+        local DAY = 24 * 3600
+        local S = T.Login()
+        S.ns.Done("squat", 8)
+        local saved = T.Logout(S)
+        S = T.Login({ epoch = 1800000000 + 8 * DAY }, saved)
+        local lo, hi = S.ns.RepRange()
+        eq(lo .. "-" .. hi, "8-10", "one break is not enough to go up")
+        S.ns.db.smart.progress = false
+        S.Slash("/health", "squat")
+        eq(Card(S, "squat").title:GetText(), "Squat break: 10 squats")
+    end)
+
+    test("options window has the smart timing switches and the weekly line", function()
+        local S = T.Login()
+        S.Slash("/health", "")
+        local texts = {}
+        for _, f in ipairs(S.frames) do
+            if f._type == "CheckButton" and f.Text then texts[#texts + 1] = f.Text:GetText() end
+        end
+        contains(texts, "natural pauses")
+        contains(texts, "calm moment")
+        contains(texts, "each week")
+        local found
+        for _, f in ipairs(S.env.RonisHealthOptions._children) do
+            if f._type == "FontString" and tostring(f._text):find("This week: 8%-10 squats") then found = true end
+        end
+        ok(found, "weekly progress line")
+    end)
+
+    test("new texts stay plain ASCII", function()
+        local S = T.Login()
+        local all = { S.ns.TEXT.timing, S.ns.TEXT.squat.More(S.ns.db) }
+        for _, m in ipairs({ "flight", "campfire", "bedroll", "food" }) do
+            all[#all + 1] = S.ns.WhyNow("squat", { moment = m, window = 100, early = true, elapsed = 1900 })
+        end
+        for _, t in ipairs(all) do ok(not t:find("[\128-\255]"), "ASCII: " .. t:sub(1, 40)) end
     end)
 end

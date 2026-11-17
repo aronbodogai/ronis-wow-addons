@@ -88,6 +88,12 @@ local function Layout(card)
         fs:SetPoint("TOPLEFT", card, "TOPLEFT", x, -y)
         y = y + fs:GetStringHeight() + (gap or 4)
     end
+    if card.reason:GetText() and card.reason:GetText() ~= "" then
+        card.reason:Show()
+        Put(card.reason, 4)
+    else
+        card.reason:Hide()
+    end
     Put(card.title, 6)
     Put(card.action, 6)
     Put(card.why, 8)
@@ -146,7 +152,8 @@ local function Primary(card)
         local token = card.countdown
         C_Timer.After(1, function() CountDown(card, token) end)
     else
-        ns.Done("squat")
+        local lo, hi, rounds = ns.RepsFor(card.ctx and card.ctx.window)
+        ns.Done("squat", rounds > 1 and hi * rounds or lo)
         Close(card)
     end
 end
@@ -177,6 +184,9 @@ local function Shell(kind)
     icon:SetTexture(ns.TEXT[kind].icon)
     card.icon = icon
 
+    card.reason = Text(card, "GameFontHighlightSmall")
+    card.reason:SetTextColor(0.31, 0.82, 0.55)
+    card.reason:SetText("")
     card.title = Text(card, "GameFontNormalLarge")
     card.action = Text(card, "GameFontHighlight")
     card.why = Text(card, "GameFontDisableSmall")
@@ -188,7 +198,7 @@ local function Build(kind)
     local card = Shell(kind)
     card.primary = Button(card, "", 132, function() Primary(card) end)
     card.snooze = Button(card, "Snooze", 70, function()
-        ns.Snooze(kind)
+        if card.ctx and card.ctx.early then ns.NotNow(kind) else ns.Snooze(kind) end
         Close(card)
     end)
     card.skip = Button(card, "Skip", 56, function()
@@ -210,14 +220,25 @@ end
 -- Fill a card with the current settings' texts.
 local function Fill(card)
     local T = ns.TEXT[card.kind]
-    card.title:SetText(T.Title(ns.db))
-    card.action:SetText(T.Action(ns.db))
+    local ctx = card.ctx
+    card.reason:SetText(ns.WhyNow(card.kind, ctx) or "")
+    card.title:SetText(T.Title(ns.db, ctx))
+    card.action:SetText(T.Action(ns.db, ctx))
     card.why:SetText(T.why)
-    card.more:SetText(T.More(ns.db))
+    card.more:SetText(T.More(ns.db) .. "\n\n" .. ns.TEXT.timing)
     card.icon:SetTexture(T.icon)
     card.primary:Enable()
     card.primary:SetText(card.kind == "eye" and "Start 20 s" or "Done")
-    card.snooze:SetText(("Snooze %d min"):format(ns.db.snooze))
+    -- an early card (natural pause) can be turned down without touching the clock
+    if ctx and ctx.early then
+        card.snooze:SetText("Not now")
+        card.skip:Hide()
+        card.buttons = { card.primary, card.snooze, card.moreButton }
+    else
+        card.snooze:SetText(("Snooze %d min"):format(ns.db.snooze))
+        card.skip:Show()
+        card.buttons = { card.primary, card.snooze, card.skip, card.moreButton }
+    end
     card.snooze:SetWidth(card.snooze:GetText():len() * 6 + 20)
 end
 
@@ -229,7 +250,8 @@ function ns.Showing(kind)
     return c and c:IsShown() or false
 end
 
-function ns.ShowReminder(kind)
+-- ctx (optional): why the card shows now, see ns.WhyNow in Data/Texts.lua
+function ns.ShowReminder(kind, ctx)
     if not anchor.placed then
         PlaceAnchor()
         anchor.placed = true
@@ -239,6 +261,7 @@ function ns.ShowReminder(kind)
     card.expanded = false
     card.countdown = nil
     card.moreButton:SetText("More")
+    card.ctx = ctx
     Fill(card)
     card:Show()
     order[#order + 1] = kind

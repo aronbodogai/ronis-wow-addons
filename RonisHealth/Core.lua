@@ -23,6 +23,14 @@ local DEFAULTS = {
     sound = true,
     pauseAFK = true,     -- timers stop while you are flagged AFK
     quietInstances = true, -- hold reminders inside dungeons and raids, sum them up after
+    smart = {
+        moments = true,  -- flights, campfires, sleeping bags, eating: a nearly due break comes early
+        calm = true,     -- a break due while you are busy waits for a calm moment (up to 5 min)
+        progress = true, -- the squat range grows a little each week you keep up
+    },
+    -- weekly squat progression: step 0 = the reps you picked
+    prog = { step = 0, done = 0, skipped = 0 },
+    flights = {},        -- "Node A - Node B" = seconds the flight took last time
 }
 ns.DEFAULTS = DEFAULTS
 
@@ -62,7 +70,9 @@ ns.Clamp = Clamp
 -- ns.left[kind]  seconds of play time until the reminder is due
 -- ns.due[kind]   true while the reminder is due but waiting (combat, instance)
 -- ns.pausedUntil GetTime() value until which everything is paused (0 = not)
-ns.left, ns.due = {}, {}
+-- ns.waited[kind] seconds a due reminder has waited so far
+-- ns.snoozed[kind] true when the running countdown is a snooze
+ns.left, ns.due, ns.waited, ns.snoozed = {}, {}, {}, {}
 ns.pausedUntil = 0
 local afkSince -- GetTime() when the AFK flag went up
 
@@ -77,7 +87,72 @@ end
 -- Restart a reminder's countdown (after it was done, skipped or turned on).
 function ns.Reset(kind, seconds)
     ns.left[kind] = seconds or ns.Interval(kind)
-    ns.due[kind] = nil
+    ns.due[kind], ns.waited[kind], ns.snoozed[kind] = nil, nil, nil
+end
+
+---------------------------------------------------------------------------
+-- Squat reps: a range that grows week by week, scaled to the time you have
+---------------------------------------------------------------------------
+ns.WEEK = 7 * 24 * 3600
+ns.REPS_CAP = 25
+
+-- The current range: lo-hi reps ("8-10"). Step 0 is the picked reps R as
+-- (R-2)-R; each step adds 1 to the bottom and about 1.5 to the top.
+function ns.RepRange()
+    local r = ns.db.squat.reps
+    if not ns.db.smart.progress then return r, r end
+    local step = ns.db.prog.step or 0
+    local hi = math.min(ns.REPS_CAP, r + math.ceil(step * 1.5))
+    local lo = math.min(hi, math.max(1, r - 2 + step))
+    return lo, hi
+end
+
+-- Reps for a pause of `window` seconds (a flight), or the range when the
+-- length is unknown. Returns lo, hi, rounds. About 15 s go on standing up;
+-- room for two full sets plus 30 s rest gives two rounds (3-minute bouts
+-- are what the studies used).
+function ns.RepsFor(window)
+    local lo, hi = ns.RepRange()
+    if not window then return lo, hi, 1 end
+    local pace = ns.MOVES[ns.db.squat.move].pace or 3
+    local avail = window - 15
+    if avail >= 2 * hi * pace + 30 then return hi, hi, 2 end
+    if avail >= hi * pace then return hi, hi, 1 end
+    local n = math.max(lo, math.floor(avail / pace))
+    return n, n, 1
+end
+
+local function StartWeek()
+    local p = ns.db.prog
+    p.since, p.done, p.skipped = time(), 0, 0
+end
+
+-- Once a week: kept up (5+ squat breaks, at most one skip per two done)
+-- means one step up; skipping more than doing means one step down.
+function ns.CheckProgress()
+    local p = ns.db.prog
+    if not p.since then StartWeek() return end
+    if time() - p.since < ns.WEEK then return end
+    local oldLo, oldHi = ns.RepRange()
+    if ns.db.smart.progress then
+        if p.done >= 5 and p.skipped * 2 <= p.done then
+            if oldHi < ns.REPS_CAP then p.step = (p.step or 0) + 1 end
+        elseif p.skipped > p.done and (p.step or 0) > 0 then
+            p.step = p.step - 1
+        end
+    end
+    StartWeek()
+    local lo, hi = ns.RepRange()
+    if lo ~= oldLo or hi ~= oldHi then
+        ns.Print(("New week: squat breaks are now %d-%d %s (were %d-%d)."):format(
+            lo, hi, ns.MOVES[ns.db.squat.move].unit, oldLo, oldHi))
+    end
+end
+
+-- Picking a level or rep count starts the progression over.
+function ns.ResetProgress()
+    ns.db.prog.step = 0
+    StartWeek()
 end
 
 local function Today()
@@ -195,13 +270,29 @@ function ns.Paused()
     return ns.pausedUntil > GetTime()
 end
 
-local function TryShow(kind)
+-- A reminder ran out: show it, or let it wait for combat to end or (when
+-- you are busy questing) for a calm moment, at most ns.CALM_GRACE.
+local function TryShow(kind, dt)
+    if ns.due[kind] then ns.waited[kind] = (ns.waited[kind] or 0) + dt end
+    local waited = ns.waited[kind] or 0
     if ns.Blocker() then
         ns.due[kind] = true
         return
     end
-    ns.due[kind] = nil
-    ns.ShowReminder(kind)
+    local busy = ns.db.smart.calm and ns.Busy()
+    if busy and waited < ns.CALM_GRACE then
+        ns.due[kind] = true
+        ns.waited[kind] = waited
+        return
+    end
+    local ctx = { elapsed = ns.Elapsed(kind), snoozed = ns.snoozed[kind] }
+    if busy then
+        ctx.forced = waited
+    elseif waited >= 15 then
+        ctx.calm = waited
+    end
+    ns.due[kind], ns.waited[kind] = nil, nil
+    ns.ShowReminder(kind, ctx)
 end
 
 function ns.Tick()
@@ -247,13 +338,19 @@ function ns.Tick()
                     ns.left[kind] = ns.Interval(kind)
                 end
             elseif ns.due[kind] then
-                TryShow(kind)
+                TryShow(kind, dt)
             else
                 ns.left[kind] = (ns.left[kind] or ns.Interval(kind)) - dt
-                if ns.left[kind] <= 0 then TryShow(kind) end
+                if ns.left[kind] <= 0 then
+                    ns.left[kind] = 0
+                    TryShow(kind, 0)
+                end
             end
         end
     end
+
+    -- flights, campfires, sleeping bags, food: a nearly due break comes early
+    if not ns.trip then ns.WatchMoments() end
 end
 
 local function Loop()
@@ -264,9 +361,12 @@ end
 ---------------------------------------------------------------------------
 -- Reminder outcomes (called by the reminder window)
 ---------------------------------------------------------------------------
-function ns.Done(kind)
+-- reps: what the card asked for (squats)
+function ns.Done(kind, reps)
     if kind == "squat" then
-        ns.Record("squat", ns.db.squat.reps)
+        ns.Record("squat", reps or ns.db.squat.reps)
+        ns.CheckProgress()
+        ns.db.prog.done = (ns.db.prog.done or 0) + 1
     else
         ns.Record("eye")
     end
@@ -275,12 +375,21 @@ end
 
 function ns.Snooze(kind)
     ns.Reset(kind, ns.db.snooze * 60)
+    ns.snoozed[kind] = true
 end
 
 function ns.Skip(kind)
     ns.RecordSkip()
+    if kind == "squat" then
+        ns.CheckProgress()
+        ns.db.prog.skipped = (ns.db.prog.skipped or 0) + 1
+    end
     ns.Reset(kind)
 end
+
+-- An early break offered at a natural pause was turned down: nothing is
+-- counted and its regular clock keeps running.
+function ns.NotNow(kind) end
 
 ---------------------------------------------------------------------------
 -- Saved data
@@ -319,7 +428,10 @@ local function Init()
     db.snooze = Clamp(db.snooze, ns.LIMITS.snooze)
     if not ns.LEVELS[db.squat.level] then db.squat.level = DEFAULTS.squat.level end
     if not ns.MOVES[db.squat.move] then db.squat.move = DEFAULTS.squat.move end
+    if type(db.flights) ~= "table" then db.flights = {} end
+    db.prog.step = math.max(0, math.floor(tonumber(db.prog.step) or 0))
     Stats()
+    ns.CheckProgress()
     RestoreClock()
     -- a run in progress survives a /reload; an old one is forgotten
     local c = db.clock
@@ -357,10 +469,12 @@ function ns.SetLevel(key)
     if not lvl then return end
     local sq = ns.db.squat
     sq.level, sq.move, sq.reps = key, lvl.move, lvl.reps
+    ns.ResetProgress()
 end
 
 function ns.SetReps(n)
     ns.db.squat.reps = Clamp(n, ns.LIMITS.reps)
+    ns.ResetProgress()
 end
 
 function ns.SetMove(key)
@@ -415,8 +529,11 @@ function ns.StatusLines()
         elseif ns.trip then
             out[#out + 1] = ("%s: held in %s, %d missed so far"):format(
                 name, ns.trip.name, ns.trip.missed[kind] or 0)
-        elseif ns.due[kind] then
+        elseif ns.due[kind] and ns.InCombat() then
             out[#out + 1] = name .. ": due, waiting until combat ends"
+        elseif ns.due[kind] then
+            out[#out + 1] = ("%s: due, waiting for a calm moment (at most %s more)"):format(
+                name, ns.Clock(ns.CALM_GRACE - (ns.waited[kind] or 0)))
         else
             out[#out + 1] = name .. ": in " .. ns.Clock(ns.left[kind])
         end
@@ -432,6 +549,17 @@ function ns.StatsLines()
             t.eye or 0, t.squat or 0, t.reps or 0, t.skipped or 0, t.missed or 0),
         ("All time: %d eye breaks, %d squat breaks (%d reps)."):format(a.eye or 0, a.squat or 0, a.reps or 0),
     }
+end
+
+-- "This week: 8-10 squats, 3 done, 1 skipped. Next step at 5 done."
+function ns.ProgressLine()
+    if not ns.db.smart.progress then return "Weekly progression is off." end
+    local p = ns.db.prog
+    local lo, hi = ns.RepRange()
+    local line = ("This week: %d-%d %s, %d done, %d skipped."):format(
+        lo, hi, ns.MOVES[ns.db.squat.move].unit, p.done or 0, p.skipped or 0)
+    if hi >= ns.REPS_CAP then return line .. " Top of the range: try a harder move." end
+    return line .. " 5 done (and few skips) moves it up next week."
 end
 
 local function Slash(msg)

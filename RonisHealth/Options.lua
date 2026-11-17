@@ -169,6 +169,23 @@ local function Build()
     Row(Stepper(win, ns.LIMITS.snooze, function() return ns.db.snooze end,
         function(v) ns.db.snooze = ns.Clamp(v, ns.LIMITS.snooze) end, "%d min"), PAD + 56, 22, 10)
 
+    -- Smart timing ---------------------------------------------------------
+    Row(Label(win, "GameFontNormal", "Smart timing"), nil, 14, 4)
+    Row(Check(win, "Use natural pauses: flights, campfires, sleeping bags, eating",
+        function() return ns.db.smart.moments end,
+        function(v) ns.db.smart.moments = v end), nil, 22, 2)
+    Row(Check(win, "When I am busy, wait for a calm moment (up to 5 min)",
+        function() return ns.db.smart.calm end,
+        function(v) ns.db.smart.calm = v end), nil, 22, 2)
+    Row(Check(win, "Add squats a little each week I keep up",
+        function() return ns.db.smart.progress end,
+        function(v) ns.db.smart.progress = v end), nil, 22, 4)
+    local prog = Label(win, "GameFontDisableSmall")
+    prog:SetWidth(W - PAD * 2)
+    prog:SetWordWrap(true)
+    Row(prog, nil, 26, 8)
+    refreshers[#refreshers + 1] = function() prog:SetText(ns.ProgressLine()) end
+
     -- Status and stats -----------------------------------------------------
     local status = Label(win, "GameFontHighlightSmall")
     status:SetWidth(W - PAD * 2)

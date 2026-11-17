@@ -203,6 +203,27 @@ its own clock until you answer it.
   now** / **Squat break now** button per missed reminder and **Dismiss**.
   Missed reminders' clocks restart on leaving; a /reload inside keeps the
   run. Missed breaks count in the stats.
+- **Smart timing** (`Moments.lua`, each part can be switched off under
+  Smart timing in the options):
+  - *Natural pauses*: boarding a flight (`UnitOnTaxi`), gaining a campfire
+    aura (Cozy Fire / Campfire / Camp Chair), the sleeping bag's
+    Well-Rested, or Food/Drink brings a break forward once 3/4 of its
+    interval has passed. Early cards have **Not now** (clock untouched,
+    not a skip). Flights under 40 s (known routes) are ignored.
+  - *Calm moments*: a break due right after a fight or quest turn-in waits
+    until you have been calm for 10 s + 5 s per fight/turn-in in the last
+    5 minutes (max 45 s), but never more than 5 minutes past due.
+  - *Why now*: a green first line on each card ("You took a flight (about
+    3:00 last time)...", "You were busy when this came due...").
+  - *Weekly progression*: squats show a range, (R-2)-R at first (8-10 at
+    Standard). A week with 5+ squat breaks and at most one skip per two
+    done steps it up (+1 bottom, +1.5 top: 9-12, 10-13, top capped at 25);
+    a week with more skips than breaks steps it down. Choosing a level or
+    reps starts over.
+  - *Reps fit the flight*: flight times are learned per route (both
+    directions share one entry, `RonisHealthDB.flights`). With ~15 s to
+    stand up and the move's pace (2-5 s/rep), a flight with room for two
+    full sets and 30 s rest gets 2 x top; otherwise one set.
 - A /reload or relog within 5 minutes keeps the countdowns; a longer
   break starts them fresh. Stats per day and all time (`/health stats`).
 

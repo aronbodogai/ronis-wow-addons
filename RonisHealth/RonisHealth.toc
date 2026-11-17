@@ -10,5 +10,6 @@
 
 Data\Texts.lua
 Core.lua
+Moments.lua
 Reminder.lua
 Options.lua
