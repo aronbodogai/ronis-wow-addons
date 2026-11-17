@@ -4,6 +4,7 @@
 ## Author: Roni
 ## Version: @project-version@
 ## X-Curse-Project-ID: 1812454
+## X-Curse-Project-ID: 1812454
 ## X-Wago-ID: n6VYVONd
 ## OptionalDeps: Bagnon
 ## SavedVariables: RonisMailMatsDB
