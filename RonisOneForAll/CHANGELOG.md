@@ -8,6 +8,11 @@ installed and how to use it.
 
 **Roni's ItemPedia**
 
+- The search box finds any item in the game, not only the ones in your bags
+  or Recent list. Matches from the open tab come first.
+- New **Quests** tab: the tradable items the quests in your quest log ask
+  for, so you can check whether you can buy them. Hover one to see which
+  quest needs it.
 - New **Reagent for spells** section: class spells that use the item, such as
   Water Walking (Fish Oil) or the warlock spells that use a Soul Shard.
 - If one section fails to draw, the others still show and the error is

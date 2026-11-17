@@ -9,6 +9,7 @@
 
 Data\Recipes.lua
 Data\ClassSpells.lua
+Data\ItemNames.lua
 Core.lua
 Sources.lua
 UI.lua

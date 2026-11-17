@@ -11,9 +11,10 @@ local PAD      = 10
 local LW       = 252                 -- left panel width
 local RW       = FW - LW - PAD * 2 - 8  -- right panel width
 local CW       = RW - 32             -- detail content width
+local SEARCH_LIMIT = 100               -- most search results shown from all items
 local COLS     = 5                   -- left grid columns
 local CELL     = 42                  -- left grid cell (slot 38 + gap)
-local TABS     = { "Bags", "Recent" }
+local TABS     = { "Bags", "Quests", "Recent" }
 
 local UI = { stack = {}, pos = 0, sections = {}, nsec = 0, listSlots = {} }
 ns.UI = UI
@@ -97,6 +98,7 @@ function ns.SetSlot(b, link, count, extra, selected)
     b.link, b.tipLink, b.label, b.extra = link, nil, nil, extra
     b.icon:SetTexture(ns.GetItemIcon(ns.ItemID(link)) or QUESTION)
     local q = select(3, ns.GetItemInfo(link))
+    if q == nil and ns.ItemMeta then q = select(2, ns.ItemMeta(ns.ItemID(link))) end
     SetBorder(b, q, selected)
     b.count:SetText((count and count ~= 1) and count or "")
     b:Show()
@@ -821,7 +823,7 @@ function UI:Create()
     search:SetAutoFocus(false)
     search.hint = search:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     search.hint:SetPoint("LEFT", 2, 0)
-    search.hint:SetText("Search name or item ID...")
+    search.hint:SetText("Search any item: name or ID...")
     search:SetScript("OnTextChanged", function(eb)
         eb.hint:SetShown(eb:GetText() == "" and not eb:HasFocus())
         UI:RefreshList()
@@ -861,6 +863,8 @@ function UI:Create()
     self.listEmpty = lc:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     self.listEmpty:SetPoint("TOP", 0, -20)
     self.listEmpty:SetWidth(LW - 50)
+    self.listMore = lc:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    self.listMore:SetWidth(LW - 50)
 
     -- Right panel: header + scrolling sections -------------------------------
     local right = CreateFrame("Frame", nil, f, "BackdropTemplate")
@@ -917,11 +921,13 @@ end
 
 function UI:GatherList()
     local tab, list, seen = ns.db.tab, {}, {}
-    local function add(link)
+    self.listExtra = {}
+    local function add(link, extra)
         local id = ns.ItemID(link)
         if id and not seen[id] then
             seen[id] = true
             list[#list + 1] = link
+            self.listExtra[link] = extra
         end
     end
     if tab == "Bags" then
@@ -931,24 +937,46 @@ function UI:GatherList()
             end
         end
         SortByQualityName(list)
+    elseif tab == "Quests" then
+        -- items your current quests ask for that you could buy or be sent
+        for _, e in ipairs(ns.QuestLogItems and ns.QuestLogItems() or {}) do
+            if ns.IsTradable(e.id) then
+                add("item:" .. e.id, "Needed for: " .. table.concat(e.quests, ", "))
+            end
+        end
     elseif tab == "Recent" then
         for _, l in ipairs(ns.db.history) do add(l) end
     end
 
+    -- Search: matches in this tab first, then every other item in the game.
+    self.searchMore = nil
     local query = strtrim(self.search:GetText() or ""):lower()
-    if query ~= "" and not tonumber(query) then
+    if query ~= "" then
         local filtered = {}
+        local num = tonumber(query)
         for _, l in ipairs(list) do
-            local n = ns.GetItemInfo(l)
-            if n and n:lower():find(query, 1, true) then filtered[#filtered + 1] = l end
+            local id = ns.ItemID(l)
+            local n = ns.GetItemInfo(l) or (ns.ItemMeta and ns.ItemMeta(id))
+            if (num and id == num) or (not num and n and n:lower():find(query, 1, true)) then
+                filtered[#filtered + 1] = l
+            end
         end
-        list = filtered
+        list, seen = {}, {}
+        for _, l in ipairs(filtered) do add(l, self.listExtra[l]) end
+        if num then
+            if ns.ItemMeta(num) or ns.GetItemInfo(num) then add("item:" .. num) end
+        elseif ns.SearchItems then
+            local ids, total = ns.SearchItems(query, SEARCH_LIMIT)
+            for _, id in ipairs(ids) do add("item:" .. id) end
+            if total and total > #ids then self.searchMore = total - #ids end
+        end
     end
     return list
 end
 
 local EMPTY_TEXT = {
     Bags = "Your bags are empty.",
+    Quests = "No tradable items needed by the quests in your quest log.",
     Recent = "Items you inspect show up here.",
 }
 
@@ -975,10 +1003,15 @@ function UI:RefreshList()
         b:SetPoint("TOPLEFT", x0 + col * CELL, -row * CELL)
         local id = ns.ItemID(link)
         local count = ns.db.tab == "Bags" and ns.GetItemCount(id) or nil
-        ns.SetSlot(b, link, count, nil, id == curID)
+        ns.SetSlot(b, link, count, self.listExtra and self.listExtra[link], id == curID)
     end
     for i = #list + 1, #self.listSlots do self.listSlots[i]:Hide() end
-    self.listChild:SetHeight(math.max(1, math.ceil(#list / COLS) * CELL))
+    local rows = math.ceil(#list / COLS)
+    self.listMore:ClearAllPoints()
+    self.listMore:SetPoint("TOP", 0, -rows * CELL - 4)
+    self.listMore:SetText(self.searchMore and ("...and " .. self.searchMore .. " more, type more letters") or "")
+    self.listMore:SetShown(self.searchMore ~= nil)
+    self.listChild:SetHeight(math.max(1, rows * CELL + (self.searchMore and 24 or 0)))
 
     local query = self.search:GetText() or ""
     self.listEmpty:SetText(query ~= "" and "No matches." or EMPTY_TEXT[ns.db.tab])
@@ -1139,4 +1172,8 @@ function UI:OnItemInfo(itemID)
     else
         self:OnDataChanged(false)
     end
+end
+
+function UI:OnQuestLog()
+    if ns.db and ns.db.tab == "Quests" then self:OnDataChanged(false) end
 end

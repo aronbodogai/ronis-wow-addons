@@ -211,6 +211,52 @@ function ns.StartQuestScan()
     end)
 end
 
+-- Quest IDs in the player's quest log.
+local function QuestLogIDs()
+    local ids = {}
+    local n = (GetNumQuestLogEntries and GetNumQuestLogEntries())
+        or (C_QuestLog and C_QuestLog.GetNumQuestLogEntries and C_QuestLog.GetNumQuestLogEntries()) or 0
+    for i = 1, n do
+        local q, header
+        if GetQuestLogTitle then
+            local _, _, _, isHeader, _, _, _, questID = GetQuestLogTitle(i)
+            q, header = questID, isHeader
+        elseif C_QuestLog and C_QuestLog.GetInfo then
+            local info = C_QuestLog.GetInfo(i)
+            q, header = info and info.questID, info and info.isHeader
+        end
+        if not header and type(q) == "number" and q > 0 then ids[#ids + 1] = q end
+    end
+    return ids
+end
+
+-- Items that quests in your quest log ask for: { [itemID] = { questName, ... } }
+-- in quest log order, as a list of { id = itemID, quests = { name, ... } }.
+function ns.QuestLogItems()
+    local out, byItem = {}, {}
+    for _, q in ipairs(QuestLogIDs()) do
+        local name = Get("QuestDB", q, "name") or ("Quest " .. q)
+        local items = {}
+        local obj = Get("QuestDB", q, "objectives")
+        for _, o in ipairs(List(obj and obj[3])) do
+            if type(o) == "table" and type(o[1]) == "number" then items[#items + 1] = o[1] end
+        end
+        for _, item in ipairs(List(Get("QuestDB", q, "requiredSourceItems"))) do
+            if type(item) == "number" then items[#items + 1] = item end
+        end
+        for _, item in ipairs(items) do
+            local e = byItem[item]
+            if not e then
+                e = { id = item, quests = {} }
+                byItem[item] = e
+                out[#out + 1] = e
+            end
+            if e.quests[#e.quests] ~= name then e.quests[#e.quests + 1] = name end
+        end
+    end
+    return out
+end
+
 local band = bit and bit.band
 local playerRaceBit
 local function AvailableToPlayer(q)

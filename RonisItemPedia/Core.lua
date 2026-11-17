@@ -119,6 +119,65 @@ local function BuildIndex()
     ns.reagentFor = reagentFor
 end
 
+---------------------------------------------------------------------------
+-- Every item's name, quality and binding (Data/ItemNames.lua), so search can
+-- find items the game client has not cached yet.
+---------------------------------------------------------------------------
+local itemPos   -- [itemID] = index of its name in ns.ITEM_DATA
+local lowered   -- [index] = lowercased name, built on the first search
+local lastQuery, lastLimit, lastOut, lastTotal -- the list refreshes often while item info arrives
+
+local function ItemPos(id)
+    if not itemPos then
+        itemPos = {}
+        local d = ns.ITEM_DATA or {}
+        for i = 1, #d, 4 do itemPos[d[i]] = i + 1 end
+    end
+    return itemPos[id]
+end
+
+-- name, quality, bonding (0 none, 1 on pickup, 2 on equip, 3 on use, 4 quest)
+function ns.ItemMeta(id)
+    local p = id and ItemPos(id)
+    if not p then return nil end
+    local d = ns.ITEM_DATA
+    return d[p], d[p + 1], d[p + 2]
+end
+
+-- Can this item be traded, mailed or sold on the auction house?
+function ns.IsTradable(id)
+    local _, _, bond = ns.ItemMeta(id)
+    if bond == nil then bond = select(14, ns.GetItemInfo(id)) end
+    return bond ~= 1 and bond ~= 4
+end
+
+-- Item IDs whose name contains `query`: names starting with it first, then
+-- by quality and name. At most `limit` results.
+function ns.SearchItems(query, limit)
+    local d = ns.ITEM_DATA
+    query = query and query:lower()
+    if not d or not query or #query < 2 then return {} end
+    if lastQuery == query and lastLimit == limit then return lastOut, lastTotal end
+    if not lowered then
+        lowered = {}
+        for i = 2, #d, 4 do lowered[i] = d[i]:lower() end
+    end
+    local hits = {}
+    for i = 2, #d, 4 do
+        local at = lowered[i]:find(query, 1, true)
+        if at then hits[#hits + 1] = { id = d[i - 1], name = d[i], q = d[i + 1], start = at == 1 } end
+    end
+    table.sort(hits, function(a, b)
+        if a.start ~= b.start then return a.start end
+        if a.q ~= b.q then return a.q > b.q end
+        return a.name < b.name
+    end)
+    local out = {}
+    for k = 1, math.min(#hits, limit or 200) do out[k] = hits[k].id end
+    lastQuery, lastLimit, lastOut, lastTotal = query, limit, out, #hits
+    return out, #hits
+end
+
 -- Friendly view of one recipe row.
 function ns.Recipe(index)
     local r = ns.RECIPES[index]
@@ -194,6 +253,8 @@ f:SetScript("OnEvent", function(_, event, arg1)
         if ns.UI and ns.UI.OnItemInfo then ns.UI:OnItemInfo(arg1) end
     elseif event == "BAG_UPDATE_DELAYED" then
         if ns.UI and ns.UI.OnDataChanged then ns.UI:OnDataChanged(false) end
+    elseif event == "QUEST_LOG_UPDATE" then
+        if ns.UI and ns.UI.OnQuestLog then ns.UI:OnQuestLog() end
     elseif event == "ZONE_CHANGED_NEW_AREA" then
         -- distances to vendors/mobs changed a lot
         if ns.UI and ns.UI.OnDataChanged then ns.UI:OnDataChanged(true) end
@@ -202,7 +263,7 @@ end)
 
 for _, e in ipairs({
     "ADDON_LOADED", "PLAYER_LOGIN", "GLOBAL_MOUSE_DOWN", "GET_ITEM_INFO_RECEIVED", "BAG_UPDATE_DELAYED",
-    "ZONE_CHANGED_NEW_AREA",
+    "ZONE_CHANGED_NEW_AREA", "QUEST_LOG_UPDATE",
 }) do
     pcall(f.RegisterEvent, f, e) -- tolerate events this client does not know
 end
