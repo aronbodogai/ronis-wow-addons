@@ -11,7 +11,7 @@ A Factoriopedia-style item window.
 - **Alt + Left-Click** an item anywhere (bags, bank, character sheet, loot,
   vendors, chat links, quest rewards, auction rows, Bagnon...) to inspect it.
   Action bar buttons are skipped because Alt-click there is self-cast.
-- Left: search box plus **Bags / Recent** item grids.
+- Left: search box (finds any item by name or ID) plus **Bags / Quests / Recent** item grids.
 - Right: header, then sections:
   - **Created by**: every recipe that makes the item (reagents -> product), with
     skill levels and where to learn it (recipe item and its vendor, or the nearest trainers)
@@ -181,21 +181,23 @@ ItemSparse and Lock tables:
 https://aronbodogai.github.io/ronis-wow-addons/ by `.github/workflows/pages.yml`
 on every push to main that touches it. GIFs go in `site/media/`.
 
-## Releasing: Roni's One For All
+## Releasing
 
-All addons ship together as one download, **Roni's One For All**: a zip with
-each addon as its own top-level folder plus the small `RonisOneForAll` hub
-addon (`/roni` lists the installed addons and their commands). Built by
-`.github/workflows/release.yml` with the BigWigsMods packager (config:
-`RonisOneForAll/.pkgmeta`).
+Each addon is its own download with its own CurseForge and Wago project,
+built by `.github/workflows/release.yml` with the BigWigsMods packager
+(config: `<Addon>/.pkgmeta`). The tag prefix picks the addon:
 
-1. Add a `## vX.Y.Z` section to `RonisOneForAll/CHANGELOG.md`.
-2. `git tag vX.Y.Z && git push origin vX.Y.Z`
+1. Add a `## vX.Y.Z` section to the addon's `CHANGELOG.md`.
+2. `git tag itempedia-vX.Y.Z && git push origin itempedia-vX.Y.Z`
+   (or `mailmats-vX.Y.Z`)
 
-The zip always goes to GitHub Releases. CurseForge and Wago uploads need the
-`CF_API_KEY` / `WAGO_API_TOKEN` repository secrets and the
-`X-Curse-Project-ID` / `X-Wago-ID` lines in `RonisOneForAll.toc`.
+The version in game and on the project pages is the part after the prefix.
+Uploads need the `CF_API_KEY` / `WAGO_API_TOKEN` repository secrets and the
+`X-Curse-Project-ID` / `X-Wago-ID` lines in the addon's toc. Running the
+workflow by hand only builds the zip and attaches it to the run.
 
-Adding a new addon to the bundle: a `move-folders` line in
-`RonisOneForAll/.pkgmeta` (plus its tools/tests in `ignore`) and a row in
-`RonisOneForAll/Hub.lua`.
+Project page text: `<Addon>/docs/DESCRIPTION.md`. Setup steps and the GIF
+shot list: `RonisItemPedia/docs/SHOTLIST.md`.
+
+Until v0.5.0 both addons shipped together as "Roni's One For All" (with a
+small `RonisOneForAll` hub addon for `/roni`); that bundle is retired.

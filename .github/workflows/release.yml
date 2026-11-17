@@ -1,27 +1,35 @@
-name: Release Roni's One For All
+name: Release
 
-# Tag a version and this builds the zip and publishes it:
+# Each addon is released on its own. Tag a version with the addon's prefix:
 #
-#   git tag v0.5.0 && git push origin v0.5.0
+#   git tag itempedia-v0.6.0 && git push origin itempedia-v0.6.0
+#   git tag mailmats-v0.12.0 && git push origin mailmats-v0.12.0
 #
-# One zip with every Roni's addon (see RonisOneForAll/.pkgmeta). Before
-# tagging, add a "## vX.Y.Z" section to RonisOneForAll/CHANGELOG.md; it becomes
-# the release notes on GitHub, CurseForge and Wago.
+# The version shown in game and on CurseForge / Wago is the part after the
+# prefix (v0.6.0). Before tagging, add a "## vX.Y.Z" section to the addon's
+# CHANGELOG.md; it becomes the release notes.
 #
-# Destinations: GitHub Releases always. CurseForge and Wago only when the
-# repository secrets CF_API_KEY / WAGO_API_TOKEN are set AND the toc has
-# X-Curse-Project-ID / X-Wago-ID. Without them that destination is skipped.
-
-# Run it by hand (Actions > Run workflow) to test the zip without uploading.
+# Uploads go to CurseForge and Wago when the repository secrets CF_API_KEY /
+# WAGO_API_TOKEN are set AND the addon's toc has X-Curse-Project-ID /
+# X-Wago-ID. Without them that destination is skipped.
+#
+# Run it by hand (Actions > Run workflow) to build a zip without uploading;
+# the zip is attached to the run as an artifact.
 
 on:
   push:
     tags:
-      - 'v*'
+      - 'itempedia-v*'
+      - 'mailmats-v*'
   workflow_dispatch:
+    inputs:
+      addon:
+        description: Addon to build
+        type: choice
+        options: [itempedia, mailmats]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   release:
@@ -31,18 +39,44 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Pick the addon
+        id: pick
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            key=${GITHUB_REF_NAME%%-v*}
+            version=${GITHUB_REF_NAME#"$key"-}
+          else
+            key=${{ inputs.addon }}
+            version=
+          fi
+          case $key in
+            itempedia) folder=RonisItemPedia ;;
+            mailmats) folder=RonisMailMats ;;
+            *) echo "::error::unknown addon '$key'"; exit 1 ;;
+          esac
+          echo "folder=$folder" >> "$GITHUB_OUTPUT"
+          if [ -n "$version" ]; then
+            # The packager names the version after the tag on HEAD. Swap the
+            # prefixed tag for a local, unprefixed one so the toc and the
+            # upload say "v0.6.0" instead of "itempedia-v0.6.0".
+            git tag --points-at HEAD | xargs -r git tag -d
+            git tag "$version"
+            echo "Releasing $folder $version"
+          fi
+
       - name: Lua syntax check
         run: |
           sudo apt-get install -y -qq lua5.1 >/dev/null
-          find Ronis* -name '*.lua' -not -path '*/tools/*' -not -path '*/tests/*' -print0 | xargs -0 -n1 luac5.1 -p
+          find ${{ steps.pick.outputs.folder }} -name '*.lua' -not -path '*/tools/*' -not -path '*/tests/*' -print0 | xargs -0 -n1 luac5.1 -p
           echo "Lua syntax OK"
 
       - name: Report which destinations are configured
         env:
           CF: ${{ secrets.CF_API_KEY }}
           WAGO: ${{ secrets.WAGO_API_TOKEN }}
+          FOLDER: ${{ steps.pick.outputs.folder }}
         run: |
-          toc=RonisOneForAll/RonisOneForAll.toc
+          toc=$FOLDER/$FOLDER.toc
           check() { # name, token, toc directive
             local id; id=$(grep -m1 "^## $3:" "$toc" | cut -d: -f2- | xargs)
             if [ -n "$2" ] && [ -n "$id" ]; then echo "$1: project $id, token set"
@@ -55,8 +89,13 @@ jobs:
         uses: BigWigsMods/packager@v2
         with:
           # manual runs (workflow_dispatch) only build the zip; uploads happen on tags
-          args: -m RonisOneForAll/.pkgmeta ${{ github.event_name == 'workflow_dispatch' && '-d' || '' }}
+          args: -m ${{ steps.pick.outputs.folder }}/.pkgmeta ${{ github.event_name == 'workflow_dispatch' && '-d' || '' }}
         env:
-          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
           WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+
+      - name: Keep the zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.pick.outputs.folder }}
+          path: .release/*.zip

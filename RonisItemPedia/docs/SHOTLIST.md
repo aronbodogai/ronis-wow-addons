@@ -1,16 +1,24 @@
 # Project page: setup and GIF shot list
 
-## Rename the projects (one time, in the web UI)
+## Project pages (one time, in the web UI)
 
-- **CurseForge** (project 1804431), Settings: name **Roni's One For All**.
-  Summary: *Roni's addons for WoW: Forever in one download: ItemPedia
-  (Alt-click any item for recipes, drops, vendors and quests with map pins)
-  and MailMats (one-click reagent mails to your alts).*
-- **Wago** (bGoYgo60): same name and summary.
-- Paste `DESCRIPTION.md` into each description editor. Upload each GIF in the
-  editor and swap it in for the `GIF-...` placeholder with the same number.
+Each addon has its own project.
+
+- **Roni's ItemPedia**: CurseForge project 1804431, Wago bGoYgo60. Name
+  **Roni's ItemPedia**. Summary: *Alt-click any item for its recipes, drops,
+  vendors and quests, with map pins. Made for WoW: Forever.* Paste
+  `RonisItemPedia/docs/DESCRIPTION.md` into the description editor.
+- **Roni's MailMats**: create a new project on CurseForge and on Wago. Name
+  **Roni's MailMats**. Summary: *Open a mailbox and send each alt the
+  reagents it can use in one click. Made for WoW: Forever.* Paste
+  `RonisMailMats/docs/DESCRIPTION.md` into the description editor, then add
+  the new IDs to `RonisMailMats/RonisMailMats.toc` as
+  `## X-Curse-Project-ID: <id>` and `## X-Wago-ID: <id>`.
+- Upload each GIF in the editor and swap it in for the `GIF-...` placeholder
+  with the same number (1 to 4 on ItemPedia, 5 on MailMats).
 - Delete the stray alpha file `RonisOneForAll-v0.4.0-2-gf20b7a7-forever.zip`
-  from both projects' Files tab (a test build that uploaded by mistake).
+  from the ItemPedia project's Files tab on both sites (a test build that
+  uploaded by mistake).
 
 ## Recording
 

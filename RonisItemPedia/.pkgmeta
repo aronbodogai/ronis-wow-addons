@@ -1,0 +1,29 @@
+# Packaging for Roni's ItemPedia (BigWigsMods/packager).
+#
+# The repository root is the whole AddOns folder, so the packager copies the
+# repo into .release/RonisItemPedia/. move-folders lifts the addon's own files
+# to the top of that folder and `ignore` drops everything else. The release
+# workflow runs the packager with `-m RonisItemPedia/.pkgmeta`; all paths here
+# are relative to the repository root. CurseForge and Wago project IDs come
+# from RonisItemPedia.toc.
+
+package-as: RonisItemPedia
+
+enable-nolib-creation: no
+
+move-folders:
+  RonisItemPedia/RonisItemPedia: RonisItemPedia
+
+# Release notes shown on CurseForge / Wago (written by hand before tagging).
+manual-changelog:
+  filename: RonisItemPedia/CHANGELOG.md
+  markup-type: markdown
+
+# Everything that is not this addon, and developer tools players do not need
+ignore:
+  - README.md
+  - LICENSE
+  - site
+  - RonisMailMats
+  - RonisItemPedia/tools
+  - RonisItemPedia/docs

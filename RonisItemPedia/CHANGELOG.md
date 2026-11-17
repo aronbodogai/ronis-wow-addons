@@ -1,7 +1,31 @@
 # Roni's ItemPedia
 
-Released as part of Roni's One For All since v0.5.0 (see
-`RonisOneForAll/CHANGELOG.md`).
+## Unreleased
+
+Roni's MailMats is its own download again. Since v0.5.0 this project shipped
+the "Roni's One For All" bundle (ItemPedia, MailMats and the `/roni`
+helper); from now on it contains only Roni's ItemPedia. If you use MailMats,
+install it from its own project page.
+
+- The search box finds any item in the game, not only the ones in your bags
+  or Recent list. Matches from the open tab come first.
+- New **Quests** tab: the tradable items the quests in your quest log ask
+  for, so you can check whether you can buy them. Hover one to see which
+  quest needs it.
+- New **Reagent for spells** section: class spells that use the item, such as
+  Water Walking (Fish Oil) or the warlock spells that use a Soul Shard.
+- Items the game has not sent details for yet show their name and every
+  section right away instead of "Retrieving item info...". Items that are
+  not in the WoW: Forever data at all say so.
+- If one section fails to draw, the others still show and the error is
+  printed in chat.
+
+## v0.5.0
+
+Released as part of Roni's One For All.
+
+- Fixed: the v0.4.0 download also contained the MailMats folder inside the
+  ItemPedia folder. It was never loaded; it is now its own proper folder.
 
 ## v0.4.0
 
