@@ -1,6 +1,6 @@
 # Roni's Health
 
-## Unreleased
+## v0.3.0
 
 - **Natural pauses:** taking a flight, sitting down (/sit, /kneel, /sleep or
   the sit key), lying on a sleeping bag, sitting at a campfire or sitting
