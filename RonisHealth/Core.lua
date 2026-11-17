@@ -28,6 +28,8 @@ local DEFAULTS = {
         calm = true,     -- a break due while you are busy waits for a calm moment (up to 5 min)
         progress = true, -- the squat range grows a little each week you keep up
     },
+    -- bedtime: wind-down card (no new dungeon), then bedtime every 10 min
+    bedtime = { enabled = false, windDown = 22 * 60 + 30, bed = 23 * 60 },
     -- weekly squat progression: step 0 = the reps you picked
     prog = { step = 0, done = 0, skipped = 0 },
 }
@@ -39,6 +41,8 @@ ns.LIMITS = {
     squatInterval = { 20, 90, 5 },
     reps = { 5, 20, 1 },
     snooze = { 1, 15, 1 },
+    -- bedtime times in minutes since noon: 19:00 to 02:00, 15 min steps
+    bedTime = { 7 * 60, 14 * 60, 15 },
 }
 
 -- Coming back after this long (offline or AFK) counts as a break.
@@ -320,6 +324,8 @@ function ns.Tick()
     end
     if ns.Paused() then return end
 
+    ns.WatchBedtime()
+
     if ns.pendingSummary and not ns.Blocker() then
         local trip = ns.pendingSummary
         ns.pendingSummary = nil
@@ -431,6 +437,13 @@ local function Init()
     if not ns.LEVELS[db.squat.level] then db.squat.level = DEFAULTS.squat.level end
     if not ns.MOVES[db.squat.move] then db.squat.move = DEFAULTS.squat.move end
     db.flights, db.taxiSpeed = nil, nil -- flight times come from OneForAll now
+    for _, k in ipairs({ "windDown", "bed" }) do
+        local v = tonumber(db.bedtime[k]) or DEFAULTS.bedtime[k]
+        db.bedtime[k] = (Clamp(ns.SinceNoon(v), ns.LIMITS.bedTime) + 720) % 1440
+    end
+    if ns.SinceNoon(db.bedtime.bed) <= ns.SinceNoon(db.bedtime.windDown) then
+        db.bedtime.bed = (db.bedtime.windDown + 15) % 1440
+    end
     db.prog.step = math.max(0, math.floor(tonumber(db.prog.step) or 0))
     Stats()
     ns.CheckProgress()
@@ -483,6 +496,16 @@ function ns.SetMove(key)
     if ns.MOVES[key] then ns.db.squat.move = key end
 end
 
+-- Bedtime times, as minutes of the day. Bedtime stays after wind-down.
+function ns.SetBedTime(key, minuteOfDay)
+    local b = ns.db.bedtime
+    b[key] = (Clamp(ns.SinceNoon(minuteOfDay), ns.LIMITS.bedTime) + 720) % 1440
+    local wind, bed = ns.SinceNoon(b.windDown), ns.SinceNoon(b.bed)
+    if bed <= wind then
+        if key == "windDown" then b.bed = (b.windDown + 15) % 1440 else b.windDown = (b.bed - 15) % 1440 end
+    end
+end
+
 function ns.Pause(minutes)
     ns.pausedUntil = GetTime() + minutes * 60
     for _, kind in ipairs(ns.KINDS) do ns.HideReminder(kind) end
@@ -516,12 +539,18 @@ local HELP = {
     "/health status - time until each reminder",
     "/health stats - breaks taken today and in total",
     "/health test - wind the clocks to 3/4 to try natural pauses",
+    "/health bed on | off - bedtime reminders (/health bed shows one)",
 }
 
 function ns.StatusLines()
     local out = {}
     if ns.Paused() then
         out[#out + 1] = "Paused for " .. ns.Clock(ns.pausedUntil - GetTime()) .. " more."
+    end
+    local b = ns.db.bedtime
+    if b.enabled then
+        out[#out + 1] = ("Bedtime: wind down at %s, bed at %s%s"):format(ns.TimeText(b.windDown),
+            ns.TimeText(b.bed), b.dismissed == ns.NightID() and " (off for tonight)" or "")
     end
     for _, kind in ipairs(ns.KINDS) do
         local name = ns.TEXT[kind].name
@@ -580,6 +609,14 @@ local function Slash(msg)
         ns.Print("Reminders are back on.")
     elseif cmd == "status" then
         for _, l in ipairs(ns.StatusLines()) do ns.Print(l) end
+    elseif cmd == "bed" or cmd == "bedtime" then
+        local b = ns.db.bedtime
+        if arg == "on" or arg == "off" then
+            b.enabled = arg == "on"
+            ns.Print("Bedtime reminders " .. (b.enabled and "on." or "off."))
+        else
+            ns.ShowBedtime("wind", b.windDown)
+        end
     elseif cmd == "test" then
         -- for trying smart timing: wind both clocks to 3/4 so the next
         -- flight, campfire, sleeping bag or meal brings the breaks up

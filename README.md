@@ -239,6 +239,15 @@ its own clock until you answer it.
     more counts as a natural pause. With ~15 s to
     stand up and the move's pace (2-5 s/rep), a flight with room for two
     full sets and 30 s rest gets 2 x top; otherwise one set.
+- **Bedtime** (`Bedtime.lua`, off by default; `/health bed on|off`):
+  at the wind-down time (22:30) one card: no new dungeon, queue crafting,
+  brush teeth / shower. In a dungeon or raid it waits until you leave, and
+  coming out of another one before bedtime shows it again. From bedtime
+  (23:00) a card that returns 10 minutes after each **OK**; **Not tonight**
+  stores the night (`RonisHealthDB.bedtime.dismissed`). Local computer
+  time; a night runs noon to 06:00 so after-midnight times still count.
+  Waits for combat to end. Times 19:00-02:00 in 15-minute steps, 12/24 h
+  per `timeMgrUseMilitaryTime`.
 - A /reload or relog within 5 minutes keeps the countdowns; a longer
   break starts them fresh. Stats per day and all time (`/health stats`).
 

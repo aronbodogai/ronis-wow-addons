@@ -261,6 +261,8 @@ function mock.NewSession(opts)
         if S.instance then return S.instanceName or "Test Dungeon", S.instance end
         return "Elwynn Forest", "none"
     end
+    S.cvars = { timeMgrUseMilitaryTime = true }
+    env.C_CVar = { GetCVarBool = function(name) return S.cvars[name] end }
     env.PlaySound = function(id) S.sounds[#S.sounds + 1] = id; return true end
     env.FlashClientIcon = function() S.flashes = S.flashes + 1 end
 

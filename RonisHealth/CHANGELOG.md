@@ -1,5 +1,15 @@
 # Roni's Health
 
+## Unreleased
+
+- **Bedtime** (off by default: options or `/health bed on`). At 22:30 one
+  card says not to start a new dungeon and to switch to easy stuff: queue up
+  some crafting, brush your teeth or shower while it runs. Inside a dungeon
+  or raid it waits until you come out. From 23:00 a bedtime card comes back
+  every 10 minutes after you close it; **Not tonight** stops it until the
+  next evening. Both times can be changed (19:00 to 02:00) and follow the
+  game's 12/24-hour clock setting.
+
 ## v0.3.0
 
 - **Natural pauses:** taking a flight, sitting down (/sit, /kneel, /sleep or

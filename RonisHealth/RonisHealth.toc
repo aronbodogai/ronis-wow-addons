@@ -12,5 +12,6 @@
 Data\Texts.lua
 Core.lua
 Moments.lua
+Bedtime.lua
 Reminder.lua
 Options.lua

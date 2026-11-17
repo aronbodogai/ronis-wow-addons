@@ -333,6 +333,50 @@ function ns.ShowSummary(trip)
     if FlashClientIcon then FlashClientIcon() end
 end
 
+---------------------------------------------------------------------------
+-- Bedtime: wind-down and bedtime cards (see Bedtime.lua)
+---------------------------------------------------------------------------
+local function BuildBed()
+    local card = Shell("bed")
+    card.ok = Button(card, "OK", 60, function()
+        ns.BedtimeOK(card.variant)
+        Close(card)
+    end)
+    card.tonight = Button(card, "Not tonight", 100, function() ns.DismissBedtime() end)
+    card.buttons = { card.ok, card.tonight }
+    card:Hide()
+    cards.bed = card
+    return card
+end
+
+function ns.BedVariant()
+    local c = cards.bed
+    return c and c:IsShown() and c.variant or nil
+end
+
+-- variant: "wind", "back" (out of a dungeon), "bed" or "late"; minute = time of day
+function ns.ShowBedtime(variant, minute)
+    if not anchor.placed then
+        PlaceAnchor()
+        anchor.placed = true
+    end
+    local card = cards.bed or BuildBed()
+    local T = ns.TEXT.bed[variant]
+    card.variant = variant
+    card.title:SetText(T.title:format(ns.TimeText(minute)))
+    card.action:SetText(T.action)
+    card.why:SetText(T.why)
+    card.more:SetText("")
+    card.expanded = false
+    if not card:IsShown() then
+        card:Show()
+        table.insert(order, 1, "bed")
+    end
+    Layout(card)
+    Sound("TELL_MESSAGE", 3081)
+    if FlashClientIcon then FlashClientIcon() end
+end
+
 function ns.HideReminder(kind)
     local c = cards[kind]
     if c and c:IsShown() then Close(c) end

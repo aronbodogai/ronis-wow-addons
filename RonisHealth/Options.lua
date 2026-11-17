@@ -36,6 +36,7 @@ local function Check(parent, text, get, set)
 end
 
 -- [-] value [+] stepper; get() returns the number, set(n) stores it.
+-- fmt: a format string, or a function(value) returning the text.
 local function Stepper(parent, lim, get, set, fmt)
     local f = CreateFrame("Frame", nil, parent)
     f:SetSize(150, 22)
@@ -49,7 +50,7 @@ local function Stepper(parent, lim, get, set, fmt)
     plus:SetPoint("LEFT", val, "RIGHT", 4, 0)
     refreshers[#refreshers + 1] = function()
         local v = get()
-        val:SetText(fmt:format(v))
+        val:SetText(type(fmt) == "function" and fmt(v) or fmt:format(v))
         minus:SetEnabled(v > lim[1])
         plus:SetEnabled(v < lim[2])
     end
@@ -185,6 +186,25 @@ local function Build()
     prog:SetWordWrap(true)
     Row(prog, nil, 26, 8)
     refreshers[#refreshers + 1] = function() prog:SetText(ns.ProgressLine()) end
+
+    -- Bedtime --------------------------------------------------------------
+    Row(Label(win, "GameFontNormal", "Bedtime"), nil, 14, 4)
+    Row(Check(win, "Remind me to wind down and go to bed",
+        function() return ns.db.bedtime.enabled end,
+        function(v) ns.db.bedtime.enabled = v end), nil, 22, 4)
+    -- times step in minutes since noon so 23:45 -> 00:00 just works
+    local function TimeStepper(key)
+        return Stepper(win, ns.LIMITS.bedTime,
+            function() return ns.SinceNoon(ns.db.bedtime[key]) end,
+            function(v) ns.SetBedTime(key, (v + 720) % 1440) end,
+            function(v) return ns.TimeText((v + 720) % 1440) end)
+    end
+    local windLabel = Label(win, "GameFontHighlight", "No new dungeons from")
+    windLabel:SetPoint("TOPLEFT", win, "TOPLEFT", PAD, -y - 4)
+    Row(TimeStepper("windDown"), PAD + 160, 22, 4)
+    local bedLabel = Label(win, "GameFontHighlight", "Bedtime, then every 10 min")
+    bedLabel:SetPoint("TOPLEFT", win, "TOPLEFT", PAD, -y - 4)
+    Row(TimeStepper("bed"), PAD + 160, 22, 10)
 
     -- Status and stats -----------------------------------------------------
     local status = Label(win, "GameFontHighlightSmall")

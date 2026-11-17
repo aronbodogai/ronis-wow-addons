@@ -700,4 +700,120 @@ return function(T)
         ok(T.Shown(S, "squat"), "squat on the flight")
         ok(T.Shown(S, "eye"), "eye on the flight")
     end)
+
+    -----------------------------------------------------------------------
+    -- Bedtime
+    -----------------------------------------------------------------------
+    local function At(h, m) return os.time({ year = 2027, month = 1, day = 5, hour = h, min = m, sec = 0 }) end
+    local BED_ON = { RonisHealthDB = { bedtime = { enabled = true }, eye = { enabled = false }, squat = { enabled = false } } }
+    local function Bed(S) return T.Card(S, "bed") end
+    local function BedShown(S) return T.Shown(S, "bed") end
+
+    test("bedtime is off unless turned on", function()
+        local S = T.Login({ epoch = At(22, 29) })
+        S.Advance(5 * MIN)
+        ok(not BedShown(S), "no card")
+    end)
+
+    test("22:30 says no new dungeon, 23:00 says bedtime, then every 10 minutes", function()
+        local S = T.Login({ epoch = At(22, 29) }, BED_ON)
+        S.Advance(50)
+        ok(not BedShown(S), "not before 22:30")
+        S.Advance(20)
+        ok(BedShown(S), "wind-down card at 22:30")
+        eq(Bed(S).title:GetText(), "22:30: wind-down time")
+        contains({ Bed(S).action:GetText() }, "Don't start a new dungeon tonight")
+        contains({ Bed(S).action:GetText() }, "brush your teeth or shower")
+        Click(Bed(S).ok)
+        S.Advance(20 * MIN)
+        ok(not BedShown(S), "said once")
+        S.Advance(10 * MIN)
+        ok(BedShown(S), "bedtime at 23:00")
+        eq(Bed(S).title:GetText(), "23:00: bedtime")
+        S.Advance(15 * MIN)
+        eq(Bed(S).title:GetText(), "23:00: bedtime", "an open card just stays")
+        Click(Bed(S).ok)
+        S.Advance(10 * MIN - 5)
+        ok(not BedShown(S), "quiet for 10 minutes")
+        S.Advance(6)
+        ok(BedShown(S), "back after 10 minutes")
+        eq(Bed(S).title:GetText(), "23:25: still up")
+    end)
+
+    test("in a dungeon at 22:30 the card waits until you come out", function()
+        local S = T.Login({ epoch = At(22, 20) }, BED_ON)
+        S.SetInstance("party", "Deadmines")
+        S.Advance(15 * MIN)
+        ok(not BedShown(S), "nothing inside")
+        S.SetInstance(nil)
+        S.Advance(2)
+        ok(BedShown(S), "shown on the way out")
+        eq(Bed(S).title:GetText(), "22:35: out of the dungeon")
+        contains({ Bed(S).action:GetText() }, "Leave the next one for tomorrow")
+        Click(Bed(S).ok)
+        -- went in anyway and came out again
+        S.SetInstance("party", "Wailing Caverns")
+        S.Advance(10 * MIN)
+        S.SetInstance(nil)
+        S.Advance(2)
+        ok(BedShown(S), "reminded again after the next one")
+    end)
+
+    test("Not tonight stops everything until the next evening", function()
+        local S = T.Login({ epoch = At(22, 59) }, BED_ON)
+        S.Advance(2 * MIN)
+        ok(BedShown(S))
+        Click(Bed(S).tonight)
+        ok(not BedShown(S), "closed")
+        contains(S.ns.StatusLines(), "off for tonight")
+        S.Advance(90 * MIN) -- past midnight: still the same night
+        ok(not BedShown(S), "quiet after midnight")
+        S.Advance(22 * 3600) -- next evening, 22:31
+        ok(BedShown(S), "back the next evening")
+    end)
+
+    test("bedtime waits for a fight to end", function()
+        local S = T.Login({ epoch = At(22, 59) }, BED_ON)
+        S.SetCombat(true)
+        S.Advance(2 * MIN)
+        ok(not BedShown(S), "not in combat")
+        S.SetCombat(false)
+        S.Advance(2)
+        ok(BedShown(S), "after the fight")
+    end)
+
+    test("bedtime times: 12-hour clock, limits, bed after wind-down", function()
+        local S = T.Login({ epoch = At(12, 0) }, BED_ON)
+        eq(S.ns.TimeText(22 * 60 + 30), "22:30")
+        S.cvars.timeMgrUseMilitaryTime = false
+        eq(S.ns.TimeText(22 * 60 + 30), "10:30 PM")
+        eq(S.ns.TimeText(30), "12:30 AM")
+        S.ns.SetBedTime("windDown", 23 * 60 + 30)
+        eq(S.ns.db.bedtime.bed, 23 * 60 + 45, "bedtime pushed after wind-down")
+        S.ns.SetBedTime("bed", 3 * 60)
+        eq(S.ns.db.bedtime.bed, 2 * 60, "latest is 02:00")
+        S.ns.SetBedTime("windDown", 17 * 60)
+        eq(S.ns.db.bedtime.windDown, 19 * 60, "earliest is 19:00")
+    end)
+
+    test("options window turns bedtime on and steps the times", function()
+        local S = T.Login({ epoch = At(12, 0) })
+        S.Slash("/health", "")
+        local check
+        for _, f in ipairs(S.frames) do
+            if f._type == "CheckButton" and f.Text and tostring(f.Text:GetText()):find("wind down") then check = f end
+        end
+        ok(check, "bedtime checkbox")
+        Click(check)
+        ok(S.ns.db.bedtime.enabled, "on")
+        local found
+        for _, f in ipairs(S.frames) do
+            if f.value and f.value:GetText() == "22:30" then found = f end
+        end
+        ok(found, "wind-down stepper shows 22:30")
+        Click(found.plus)
+        eq(S.ns.db.bedtime.windDown, 22 * 60 + 45)
+        S.Slash("/health", "bed off")
+        ok(not S.ns.db.bedtime.enabled, "/health bed off")
+    end)
 end

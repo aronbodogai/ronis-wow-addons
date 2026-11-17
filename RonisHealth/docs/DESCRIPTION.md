@@ -34,6 +34,10 @@ flights. Without it, flight times are estimated from the route's length.
   the range goes up a little (9-12, 10-13, ...). On a flight or a crafting
   queue the reps fit the time: a 3-minute flight gets two rounds, a
   1-minute one a single set.
+- **Bedtime** (turn it on in the options): at 22:30, no new dungeons, time
+  for easy stuff like a crafting queue while you brush your teeth. If you
+  are in a dungeon it waits until you come out. From 23:00 a bedtime card
+  every 10 minutes, with **Not tonight** to stop it.
 - Snooze, skip, pause for an hour, and see how many breaks you took today.
 
 Commands
@@ -47,5 +51,6 @@ Commands
 | `/health resume` | End a pause |
 | `/health status` | Time until each reminder |
 | `/health stats` | Breaks taken today and in total |
+| `/health bed on` / `off` | Bedtime reminders (`/health bed` shows one) |
 
 General wellbeing suggestions, not medical advice.

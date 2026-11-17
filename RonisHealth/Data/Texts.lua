@@ -215,6 +215,37 @@ ns.TEXT.timing = H("Why now?") .. "\n" .. "Cards come at natural pauses (flights
     .. "less disruptive than in the middle of one (Adamczyk and Bailey, 2004), and linking a habit to a moment "
     .. "that happens anyway helps it become automatic (Gardner, Lally and Wardle, 2012)."
 
+---------------------------------------------------------------------------
+-- Bedtime cards. %s is the time.
+---------------------------------------------------------------------------
+local WIND_WHY = "Exciting games right before bed keep you alert and push sleep later. A calm half hour helps."
+local BED_WHY = "Adults need 7 or more hours of sleep a night (AASM and Sleep Research Society)."
+ns.TEXT.bed = {
+    icon = "Interface\\Icons\\Spell_Nature_Sleep",
+    wind = {
+        title = "%s: wind-down time",
+        action = "Don't start a new dungeon tonight. Switch to easy stuff: queue up some crafting, "
+            .. "then brush your teeth or shower while it runs.",
+        why = WIND_WHY,
+    },
+    back = {
+        title = "%s: out of the dungeon",
+        action = "Leave the next one for tomorrow. Queue up some crafting or park at an inn, "
+            .. "then go brush your teeth and shower.",
+        why = WIND_WHY,
+    },
+    bed = {
+        title = "%s: bedtime",
+        action = "Log off and go to sleep. Park at an inn first for rested XP.",
+        why = BED_WHY,
+    },
+    late = {
+        title = "%s: still up",
+        action = "Time to log off. This comes back every 10 minutes.",
+        why = BED_WHY,
+    },
+}
+
 -- Shown after leaving a dungeon or raid with "quiet in instances" on.
 local function Plural(n, one) return ("%d %s%s"):format(n, one, n == 1 and "" or "s") end
 
