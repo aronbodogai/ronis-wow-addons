@@ -1,6 +1,6 @@
 # Roni's Health
 
-## Unreleased
+## v0.2.0
 
 - **Dungeon and raid summary:** reminders are held inside dungeons and
   raids (now on by default). Leaving shows one "Back from <instance>" card
