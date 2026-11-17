@@ -513,6 +513,7 @@ local HELP = {
     "/health resume - end a pause",
     "/health status - time until each reminder",
     "/health stats - breaks taken today and in total",
+    "/health test - wind the clocks to 3/4 to try natural pauses",
 }
 
 function ns.StatusLines()
@@ -577,6 +578,16 @@ local function Slash(msg)
         ns.Print("Reminders are back on.")
     elseif cmd == "status" then
         for _, l in ipairs(ns.StatusLines()) do ns.Print(l) end
+    elseif cmd == "test" then
+        -- for trying smart timing: wind both clocks to 3/4 so the next
+        -- flight, campfire, sleeping bag or meal brings the breaks up
+        for _, kind in ipairs(ns.KINDS) do
+            if ns.Enabled(kind) and not ns.Showing(kind) then
+                ns.Reset(kind, math.floor(ns.Interval(kind) * (1 - ns.EARLY_SHARE)))
+            end
+        end
+        ns.Print("Both breaks are now 3/4 of the way through. Take a flight, sit at a campfire, "
+            .. "lie on your sleeping bag or eat to see them come early. /health status shows the clocks.")
     elseif cmd == "stats" then
         for _, l in ipairs(ns.StatsLines()) do ns.Print(l) end
     else

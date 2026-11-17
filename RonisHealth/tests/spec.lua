@@ -589,4 +589,14 @@ return function(T)
         end
         for _, t in ipairs(all) do ok(not t:find("[\128-\255]"), "ASCII: " .. t:sub(1, 40)) end
     end)
+
+    test("/health test winds the clocks so the next flight brings both breaks", function()
+        local S = T.Login()
+        S.Slash("/health", "test")
+        contains(S.printLog, "3/4 of the way")
+        S.TakeFlight("Stormwind", "Goldshire")
+        S.Advance(2)
+        ok(T.Shown(S, "squat"), "squat on the flight")
+        ok(T.Shown(S, "eye"), "eye on the flight")
+    end)
 end
