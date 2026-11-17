@@ -3,6 +3,7 @@
 ## Notes: Remembers your alts' professions and drafts mails with the reagents they can use.
 ## Author: Roni
 ## Version: @project-version@
+## X-Wago-ID: n6VYVONd
 ## OptionalDeps: Bagnon
 ## SavedVariables: RonisMailMatsDB
 ## IconTexture: Interface\Icons\INV_Letter_15
