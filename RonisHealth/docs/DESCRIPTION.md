@@ -19,6 +19,8 @@ Small, honest reminders to look after yourself while you play.
 - No pop-ups inside dungeons and raids: when you come out, one card sums up
   how long you were in and which breaks you missed, with a button to take
   each one now.
+
+  ![Back from Gnomeregan: missed 3 eye breaks and 2 squat breaks](https://aronbodogai.github.io/ronis-wow-addons/media/health-dungeon-summary.png)
 - Snooze, skip, pause for an hour, and see how many breaks you took today.
 
 Commands
