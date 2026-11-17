@@ -148,7 +148,8 @@ end
 function ns.IsTradable(id)
     local _, _, bond = ns.ItemMeta(id)
     if bond == nil then bond = select(14, ns.GetItemInfo(id)) end
-    return bond ~= 1 and bond ~= 4
+    -- unknown items (not in this client's data) cannot be bought either
+    return bond ~= nil and bond ~= 1 and bond ~= 4
 end
 
 -- Item IDs whose name contains `query`: names starting with it first, then

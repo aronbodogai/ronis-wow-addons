@@ -1049,22 +1049,27 @@ function UI:Render()
     local name, full, q = info[1], info[2], info[3]
     ns.SetSlot(self.hdrSlot, full or link)
 
-    if not name then
+    local loaded = name ~= nil
+    if loaded then
+        self.hdrName:SetText(name)
+        self.hdrName:SetTextColor(QualityColor(q))
+        local sub = info[7] and info[7] ~= "" and info[7] or (info[6] or "")
+        if info[9] and info[9] ~= "" and _G[info[9]] then sub = sub .. "  -  " .. _G[info[9]] end
+        if info[4] and info[4] > 0 then sub = sub .. "  -  Item Level " .. info[4] end
+        self.hdrSub:SetText(sub)
+    else
+        -- The server has not sent this item yet (or never will: Questie lists
+        -- some items this client does not have). Draw what we know anyway and
+        -- redraw when the item info arrives.
         self.pending = id
-        self.hdrName:SetText("Retrieving item info...")
-        self.hdrName:SetTextColor(0.6, 0.6, 0.6)
-        self.hdrSub:SetText("Item " .. id)
-        self.content:SetHeight(1)
-        self:RefreshList()
-        return
+        if C_Item and C_Item.RequestLoadItemDataByID then pcall(C_Item.RequestLoadItemDataByID, id) end
+        local mName, mQuality = ns.ItemMeta(id)
+        local fallback = mName or (ns.QuestieItemName and ns.QuestieItemName(id))
+        self.hdrName:SetText(fallback or ("Item " .. id))
+        if mQuality then self.hdrName:SetTextColor(QualityColor(mQuality)) else self.hdrName:SetTextColor(0.6, 0.6, 0.6) end
+        self.hdrSub:SetText(mName and ("Item " .. id .. "  -  retrieving item info...")
+            or ("Item " .. id .. "  -  not in the WoW: Forever item data"))
     end
-
-    self.hdrName:SetText(name)
-    self.hdrName:SetTextColor(QualityColor(q))
-    local sub = info[7] and info[7] ~= "" and info[7] or (info[6] or "")
-    if info[9] and info[9] ~= "" and _G[info[9]] then sub = sub .. "  -  " .. _G[info[9]] end
-    if info[4] and info[4] > 0 then sub = sub .. "  -  Item Level " .. info[4] end
-    self.hdrSub:SetText(sub)
 
     local y = 0
     local ok, src = pcall(ns.GetSources, id)
@@ -1097,8 +1102,10 @@ function UI:Render()
     Draw(self.SectionRows, "Gathered from", src.objects or {}, src.objectsTotal, ObjectText)
     Draw(self.SectionRows, "Sold by", src.vendors or {}, src.vendorsTotal, NpcText)
     Draw(self.SectionRows, "Quest reward", src.quests or {}, src.questsTotal, QuestReqText)
-    Draw(self.SectionProperties, link, id, info)
-    Draw(self.SectionTooltip, full or link)
+    if loaded then
+        Draw(self.SectionProperties, link, id, info)
+        Draw(self.SectionTooltip, full or link)
+    end
     self.content:SetHeight(math.max(1, y))
     self:RefreshList()
 end

@@ -211,6 +211,11 @@ function ns.StartQuestScan()
     end)
 end
 
+function ns.QuestieItemName(id)
+    local n = Get("ItemDB", id, "name")
+    return type(n) == "string" and n or nil
+end
+
 -- Quest IDs in the player's quest log.
 local function QuestLogIDs()
     local ids = {}
