@@ -1,6 +1,6 @@
 # Roni's ItemPedia
 
-## Unreleased
+## v0.6.0
 
 Roni's MailMats is its own download again. Since v0.5.0 this project shipped
 the "Roni's One For All" bundle (ItemPedia, MailMats and the `/roni`
