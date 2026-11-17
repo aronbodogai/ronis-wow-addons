@@ -5,6 +5,10 @@ Small, honest reminders to look after yourself while you play.
 
 **Made for WoW: Forever.**
 
+**Works better with OneForAll**
+(optional): Roni's Health reads its flight times to size squat breaks on
+flights. Without it, flight times are estimated from the route's length.
+
 - **Eye breaks (20-20-20):** every 20 minutes, look at something at least
   6 m (20 ft) away for 20 seconds and blink slowly a few times. Press
   **Start 20 s** and the card counts down for you.
@@ -21,14 +25,15 @@ Small, honest reminders to look after yourself while you play.
   each one now.
 
   ![Back from Gnomeregan: missed 3 eye breaks and 2 squat breaks](https://aronbodogai.github.io/ronis-wow-addons/media/health-dungeon-summary.png)
-- **Natural pauses:** take a flight, sit down, lie on your sleeping bag,
-  sit at a campfire or sit down to eat, and a break that is nearly due (3/4 of
+- **Natural pauses:** take a flight, queue up a long batch of crafting, sit
+  down, lie on your sleeping bag, sit at a campfire or sit down to eat, and a break that is nearly due (3/4 of
   its time) comes early. The card says why it showed up now.
 - **Busy questing?** A break that comes due mid-pull waits for a calm
   moment, at most 5 minutes.
 - **Squats that grow with you:** start at 8-10, and each week you keep up
-  the range goes up a little (9-12, 10-13, ...). On a flight the reps fit
-  the flight: a 3-minute flight gets two rounds, a 1-minute one a single set.
+  the range goes up a little (9-12, 10-13, ...). On a flight or a crafting
+  queue the reps fit the time: a 3-minute flight gets two rounds, a
+  1-minute one a single set.
 - Snooze, skip, pause for an hour, and see how many breaks you took today.
 
 Commands

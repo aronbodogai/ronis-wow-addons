@@ -15,10 +15,15 @@
 - **Weekly progression:** squats show a range (8-10 at Standard). Each week
   with 5+ breaks and few skips adds to it (9-12, 10-13, ...); a week of
   mostly skips steps it back. Picking a level or rep count starts over.
-- **Reps fit the flight:** flight times are learned per route and direction
-  (by node ID). A route flown for the first time is estimated from its
-  length (22 yd/s to start, calibrated after each flight). A long flight
-  gets two rounds, a short one a single set, flights under 40 s none.
+- **Long crafting queues:** queuing 2 or more crafts that will take 40 s or
+  more counts as a natural pause too ("You queued up crafting (40 crafts,
+  about 2:20)").
+- **Reps fit the pause:** a long pause gets two rounds, a short one a single
+  set, under 40 s no card. Flight times come from the OneForAll addon when
+  it is installed (new optional dependency), otherwise from the route's
+  length; crafting time from the queue.
+- Flights are noticed reliably even when the game keeps the taxi flag up
+  after landing.
 - Options: a Smart timing section to switch each of these off.
 
 ## v0.2.0

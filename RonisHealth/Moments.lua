@@ -13,7 +13,7 @@ local ADDON, ns = ...
 ns.EARLY_SHARE = 0.75     -- a natural pause brings a break forward from 3/4 of its interval
 ns.CALM_GRACE = 5 * 60    -- a due break waits at most this long for a calm moment
 ns.ACTIVITY_WINDOW = 5 * 60
-ns.MIN_FLIGHT = 40        -- known flights shorter than this are not worth a card
+ns.MIN_FLIGHT = 40        -- flights and craft batches shorter than this are not worth a card
 
 ---------------------------------------------------------------------------
 -- How busy you are: fights started and quests handed in lately
@@ -50,17 +50,24 @@ end
 ---------------------------------------------------------------------------
 -- Flights
 --
--- Times are learned per route and direction (keyed by taxi node IDs, like
--- the InFlight addon does). A route never flown before is estimated from
--- the straight-line length of its hops: seconds = yards / speed + 5 per hop.
--- The speed starts at 22 yd/s (taxis fly about 30 yd/s, but the path curves
--- and takeoff and landing take time) and calibrates itself after each flight.
+-- How long a flight takes comes from the OneForAll addon when it is
+-- installed: it computes times from the client's flight path data and the
+-- flights you take (OneForAll.FlightTimeTo). Without it the time is
+-- estimated from the straight-line length of the hops: seconds = yards /
+-- 22 + 5 per hop (taxis fly about 30 yd/s, but the path curves and takeoff
+-- and landing take time).
+--
+-- Landing: UnitOnTaxi does not always turn false on the live client
+-- (OneForAll found the same), so a flight also ends when control comes
+-- back or when you slow below taxi speed after flying fast.
 ---------------------------------------------------------------------------
 ns.TAXI_SPEED = 22
 ns.HOP_SECONDS = 5
+ns.TAXI_FAST = 20 -- yd/s: faster is a taxi, slower is running or riding
 
 local pendingRoute   -- set when a route is picked at the flight master
-local flight         -- { key, start, dist, hops, noRecord } while flying
+local flight         -- { start, fast } while flying
+local wasOnTaxi = false
 
 local function OnTaxi()
     return UnitOnTaxi and UnitOnTaxi("player") and true or false
@@ -90,7 +97,8 @@ local function WorldXY(mapID, pos)
 end
 
 -- Straight-line yards along the hops to `slot`, and the number of hops.
-local function RouteDistance(slot, nodes, mapID)
+local function RouteDistance(slot)
+    local nodes, mapID = TaxiNodes()
     local hops = GetNumRoutes and GetNumRoutes(slot) or 0
     if not hops or hops < 1 or not TaxiGetNodeSlot then return nil, nil end
     local total = 0
@@ -104,82 +112,95 @@ local function RouteDistance(slot, nodes, mapID)
     return total, hops
 end
 
-local function NodeKey(node, slot)
-    if node and node.nodeID then return "#" .. node.nodeID end
-    return TaxiNodeName and TaxiNodeName(slot) or nil
+-- Estimated seconds from a route's length, or nil.
+function ns.EstimateFlight(dist, hops)
+    if not dist or dist <= 0 then return nil end
+    local t = dist / ns.TAXI_SPEED + ns.HOP_SECONDS * (hops or 1)
+    if t < 15 or t > 900 then return nil end
+    return math.floor(t + 0.5)
+end
+
+-- Seconds to taxi slot `slot` and where the number came from
+-- ("oneforall" or "length"), or nil.
+function ns.FlightTimeTo(slot)
+    local ofa = rawget(_G, "OneForAll")
+    if type(ofa) == "table" and type(ofa.FlightTimeTo) == "function" then
+        local ok, t = pcall(ofa.FlightTimeTo, slot)
+        if ok and type(t) == "number" and t > 0 then return math.floor(t + 0.5), "oneforall" end
+    end
+    local t = ns.EstimateFlight(RouteDistance(slot))
+    if t then return t, "length" end
+    return nil
 end
 
 if hooksecurefunc and TakeTaxiNode then
     hooksecurefunc("TakeTaxiNode", function(slot)
-        local nodes, mapID = TaxiNodes()
-        local from
-        for i = 1, (NumTaxiNodes and NumTaxiNodes() or 0) do
-            if TaxiNodeGetType(i) == "CURRENT" then from = i break end
-        end
-        local a, b = from and NodeKey(nodes[from], from), NodeKey(nodes[slot], slot)
-        local dist, hops = RouteDistance(slot, nodes, mapID)
-        pendingRoute = {
-            key = a and b and (a .. ">" .. b) or nil,
-            dist = dist, hops = hops or 1, at = GetTime(),
-        }
+        local t, source = ns.FlightTimeTo(slot)
+        pendingRoute = { time = t, source = source, at = GetTime() }
     end)
-end
-if hooksecurefunc and TaxiRequestEarlyLanding then
-    hooksecurefunc("TaxiRequestEarlyLanding", function()
-        if flight then flight.noRecord = true end
-    end)
-end
-
--- Seconds a route took last time, or nil when it is new.
-function ns.FlightTime(key)
-    local t = key and ns.db.flights[key]
-    return tonumber(t)
-end
-
-function ns.TaxiSpeed()
-    return tonumber(ns.db.taxiSpeed) or ns.TAXI_SPEED
-end
-
--- Estimated seconds for a new route from its length, or nil.
-function ns.EstimateFlight(dist, hops)
-    if not dist or dist <= 0 then return nil end
-    local t = dist / ns.TaxiSpeed() + ns.HOP_SECONDS * (hops or 1)
-    if t < 15 or t > 900 then return nil end
-    return math.floor(t + 0.5)
 end
 
 local function TakeOff()
     local r = pendingRoute and GetTime() - pendingRoute.at < 30 and pendingRoute or {}
     pendingRoute = nil
-    flight = { key = r.key, start = GetTime(), dist = r.dist, hops = r.hops }
-    local window = ns.FlightTime(r.key)
-    local estimated = false
-    if not window then
-        window = ns.EstimateFlight(r.dist, r.hops)
-        estimated = window ~= nil
-    end
-    ns.Moment({ moment = "flight", window = window, estimated = estimated })
+    flight = { start = GetTime() }
+    ns.Moment({ moment = "flight", window = r.time, source = r.source })
 end
 
-local function Landed()
-    local f = flight
-    flight = nil
-    local took = GetTime() - f.start
-    if f.noRecord or took < 10 then return end
-    if f.key then
-        local old = ns.FlightTime(f.key)
-        if not old or math.abs(old - took) > 2 then ns.db.flights[f.key] = math.floor(took + 0.5) end
-    end
-    -- calibrate the speed used for new routes
-    if f.dist and f.dist > 0 then
-        local v = f.dist / math.max(1, took - ns.HOP_SECONDS * (f.hops or 1))
-        if v > 8 and v < 60 then
-            ns.db.taxiSpeed = math.floor((0.8 * ns.TaxiSpeed() + 0.2 * v) * 10 + 0.5) / 10
-        end
-    end
-end
+local function Land() flight = nil end
 
 function ns.OnFlight() return flight ~= nil end
+
+local function WatchFlight()
+    local onTaxi = OnTaxi()
+    local rising = onTaxi and not wasOnTaxi
+    wasOnTaxi = onTaxi
+    if flight then
+        local speed = GetUnitSpeed and GetUnitSpeed("player") or 0
+        if speed >= ns.TAXI_FAST then flight.fast = true end
+        if not onTaxi or (flight.fast and speed < ns.TAXI_FAST) then Land() end
+    end
+    -- a new flight: the taxi flag going up, or a route picked while the
+    -- flag never came down from the last one
+    if not flight and onTaxi and (rising or pendingRoute) then TakeOff() end
+end
+
+---------------------------------------------------------------------------
+-- Crafting a batch
+--
+-- Queuing several crafts (Create All, a count, or TradeSkillMaster) goes
+-- through C_TradeSkillUI.CraftRecipe(recipe, count). When the first cast
+-- starts, count x cast time (plus a short gap between casts) says how long
+-- the character will be busy. 40 s or more counts as a natural pause.
+---------------------------------------------------------------------------
+ns.CRAFT_GAP = 0.5
+local pendingCraft -- { count, at } from CraftRecipe until its first cast starts
+
+if hooksecurefunc and C_TradeSkillUI and C_TradeSkillUI.CraftRecipe then
+    hooksecurefunc(C_TradeSkillUI, "CraftRecipe", function(_, count)
+        count = tonumber(count) or 1
+        if count >= 2 then pendingCraft = { count = count, at = GetTime() } else pendingCraft = nil end
+    end)
+end
+
+-- seconds the batch will take, from the cast that just started
+function ns.CraftBatchTime(count)
+    if not UnitCastingInfo then return nil end
+    local _, _, _, startMS, endMS = UnitCastingInfo("player")
+    if not (startMS and endMS) or endMS <= startMS then return nil end
+    local cast = (endMS - startMS) / 1000
+    return math.floor(count * cast + (count - 1) * ns.CRAFT_GAP + 0.5)
+end
+
+local function CraftStarted()
+    local p = pendingCraft
+    pendingCraft = nil
+    if not p or GetTime() - p.at > 5 then return end
+    local t = ns.CraftBatchTime(p.count)
+    if t and t >= ns.MIN_FLIGHT then
+        ns.Moment({ moment = "craft", window = t, crafts = p.count })
+    end
+end
 
 ---------------------------------------------------------------------------
 -- Sitting and lying down
@@ -294,7 +315,7 @@ function ns.Elapsed(kind)
 end
 
 -- A natural pause started: show each break that is due or nearly due.
--- info = { moment, window = seconds or nil, estimated = window is a guess }
+-- info = { moment, window = seconds or nil, source = where a flight time came from, crafts = count }
 function ns.Moment(info)
     if not ns.db or not ns.db.smart.moments then return end
     if ns.Paused() or ns.trip or ns.Blocker() then return end
@@ -309,7 +330,7 @@ function ns.Moment(info)
             if due or early then
                 ns.due[kind], ns.waited[kind] = nil, nil
                 ns.ShowReminder(kind, {
-                    moment = info.moment, window = info.window, estimated = info.estimated,
+                    moment = info.moment, window = info.window, source = info.source, crafts = info.crafts,
                     early = not due, elapsed = elapsed,
                 })
             end
@@ -319,13 +340,9 @@ end
 
 -- Called every second by the core's clock.
 function ns.WatchMoments()
-    local onTaxi = OnTaxi()
-    if onTaxi and not flight then
-        StandUp()
-        TakeOff()
-    elseif not onTaxi and flight then
-        Landed()
-    end
+    local before = flight
+    WatchFlight()
+    if flight and not before then StandUp() end
     for _, m in ipairs(ScanAuras()) do ns.Moment({ moment = m }) end
 end
 
@@ -339,6 +356,8 @@ ev:RegisterEvent("QUEST_TURNED_IN")
 ev:RegisterEvent("PLAYER_STARTED_MOVING")
 ev:RegisterEvent("PLAYER_UPDATE_RESTING")
 ev:RegisterEvent("PLAYER_ENTERING_WORLD")
+ev:RegisterEvent("PLAYER_CONTROL_GAINED")
+ev:RegisterUnitEvent("UNIT_SPELLCAST_START", "player")
 ev:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_REGEN_DISABLED" or event == "QUEST_TURNED_IN" then
         ns.NoteActivity()
@@ -351,10 +370,12 @@ ev:SetScript("OnEvent", function(_, event)
     elseif event == "PLAYER_UPDATE_RESTING" then
         RestingChanged()
     elseif event == "PLAYER_ENTERING_WORLD" then
-        -- logging in or hearthing into an inn is not lying down, and a
-        -- loading screen in the middle of a flight spoils its time
+        -- logging in or hearthing into an inn is not lying down
         ignoreRestUntil = GetTime() + 15
         StandUp()
-        if flight then flight.noRecord = true end
+    elseif event == "PLAYER_CONTROL_GAINED" then
+        if flight and GetTime() - flight.start > 5 then Land() end
+    elseif event == "UNIT_SPELLCAST_START" then
+        CraftStarted()
     end
 end)

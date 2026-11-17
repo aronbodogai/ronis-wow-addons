@@ -168,7 +168,7 @@ ns.TEXT.squat = {
 
 ---------------------------------------------------------------------------
 -- "Why now": one line on top of a card saying what brought it up.
--- ctx = { moment, window, estimated, early, elapsed, calm, forced, snoozed }
+-- ctx = { moment, window, source, crafts, early, elapsed, calm, forced, snoozed }
 ---------------------------------------------------------------------------
 local MOMENT = {
     flight = "You took a flight",
@@ -176,6 +176,7 @@ local MOMENT = {
     bedroll = "You lay down on your sleeping bag",
     food = "You sat down to eat or drink",
     sit = "You sat down",
+    craft = "You queued up crafting",
     lie = "You lay down",
 }
 
@@ -187,7 +188,9 @@ function ns.WhyNow(kind, ctx)
     if ctx.moment then
         local s = MOMENT[ctx.moment] or "You are taking a pause"
         if ctx.moment == "flight" and ctx.window then
-            s = s .. (ctx.estimated and " (about %s by its length)" or " (about %s last time)"):format(ns.Clock(ctx.window))
+            s = s .. (ctx.source == "length" and " (about %s by its length)" or " (about %s)"):format(ns.Clock(ctx.window))
+        elseif ctx.moment == "craft" and ctx.window then
+            s = s .. (" (%d crafts, about %s)"):format(ctx.crafts or 0, ns.Clock(ctx.window))
         end
         s = s .. ": the game does not need you for a bit."
         if ctx.early and since then
@@ -207,7 +210,7 @@ function ns.WhyNow(kind, ctx)
     return nil
 end
 
-ns.TEXT.timing = H("Why now?") .. "\n" .. "Cards come at natural pauses (flights, campfires, sleeping bags, eating) and wait "
+ns.TEXT.timing = H("Why now?") .. "\n" .. "Cards come at natural pauses (flights, long crafting queues, sitting down, sleeping bags, eating) and wait "
     .. "for a calm moment when you are busy, up to 5 minutes. Interruptions at a break point in a task are "
     .. "less disruptive than in the middle of one (Adamczyk and Bailey, 2004), and linking a habit to a moment "
     .. "that happens anyway helps it become automatic (Gardner, Lally and Wardle, 2012)."

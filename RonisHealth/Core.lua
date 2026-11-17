@@ -24,13 +24,12 @@ local DEFAULTS = {
     pauseAFK = true,     -- timers stop while you are flagged AFK
     quietInstances = true, -- hold reminders inside dungeons and raids, sum them up after
     smart = {
-        moments = true,  -- flights, campfires, sleeping bags, eating: a nearly due break comes early
+        moments = true,  -- flights, crafting, sitting, sleeping bags, eating: a nearly due break comes early
         calm = true,     -- a break due while you are busy waits for a calm moment (up to 5 min)
         progress = true, -- the squat range grows a little each week you keep up
     },
     -- weekly squat progression: step 0 = the reps you picked
     prog = { step = 0, done = 0, skipped = 0 },
-    flights = {},        -- "Node A - Node B" = seconds the flight took last time
 }
 ns.DEFAULTS = DEFAULTS
 
@@ -349,7 +348,7 @@ function ns.Tick()
         end
     end
 
-    -- flights, campfires, sleeping bags, food: a nearly due break comes early
+    -- flights, crafting, sitting, sleeping bags, food: a nearly due break comes early
     if not ns.trip then ns.WatchMoments() end
 end
 
@@ -431,7 +430,7 @@ local function Init()
     db.snooze = Clamp(db.snooze, ns.LIMITS.snooze)
     if not ns.LEVELS[db.squat.level] then db.squat.level = DEFAULTS.squat.level end
     if not ns.MOVES[db.squat.move] then db.squat.move = DEFAULTS.squat.move end
-    if type(db.flights) ~= "table" then db.flights = {} end
+    db.flights, db.taxiSpeed = nil, nil -- flight times come from OneForAll now
     db.prog.step = math.max(0, math.floor(tonumber(db.prog.step) or 0))
     Stats()
     ns.CheckProgress()

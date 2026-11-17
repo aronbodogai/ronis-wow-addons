@@ -5,6 +5,7 @@
 ## Version: @project-version@
 ## X-Curse-Project-ID: 1812440
 ## X-Wago-ID: v63QgBGb
+## OptionalDeps: OneForAll
 ## SavedVariables: RonisHealthDB
 ## IconTexture: Interface\Icons\Spell_Holy_MindVision
 

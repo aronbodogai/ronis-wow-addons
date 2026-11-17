@@ -177,6 +177,9 @@ ItemSparse and Lock tables:
 
 ## RonisHealth — "Roni's Health"
 
+Optional dependency: **OneForAll** (`## OptionalDeps: OneForAll`), for
+flight times. Without it flights are estimated from their length.
+
 Break reminders while you play. Timers count play time only: they stop
 while you are flagged AFK (option) or paused, and an open reminder stops
 its own clock until you answer it.
@@ -224,12 +227,16 @@ its own clock until you answer it.
     done steps it up (+1 bottom, +1.5 top: 9-12, 10-13, top capped at 25);
     a week with more skips than breaks steps it down. Choosing a level or
     reps starts over.
-  - *Reps fit the flight*: flight times are learned per route and direction
-    by taxi node ID (`RonisHealthDB.flights`, like InFlight; early landings
-    and loading screens are not recorded). A new route is estimated as
-    straight-line hop yards (`C_TaxiMap.GetAllTaxiNodes` positions via
-    `C_Map.GetWorldPosFromMapPos`) / 22 yd/s + 5 s per hop; the speed
-    calibrates after each flight (`RonisHealthDB.taxiSpeed`). With ~15 s to
+  - *Reps fit the pause*: the flight time comes from OneForAll when it is
+    installed (`OneForAll.FlightTimeTo(slot)`, which uses the client's
+    flight path data and the flights you take); otherwise straight-line hop
+    yards (`C_TaxiMap.GetAllTaxiNodes` positions via
+    `C_Map.GetWorldPosFromMapPos`) / 22 yd/s + 5 s per hop. A flight also
+    ends on PLAYER_CONTROL_GAINED or when you slow below 20 yd/s after flying
+    fast, because `UnitOnTaxi` can stay true after landing. A crafting queue
+    (`C_TradeSkillUI.CraftRecipe` with a count of 2+) lasts count x cast
+    time (`UnitCastingInfo` at the first cast) + 0.5 s per gap; 40 s or
+    more counts as a natural pause. With ~15 s to
     stand up and the move's pace (2-5 s/rep), a flight with room for two
     full sets and 30 s rest gets 2 x top; otherwise one set.
 - A /reload or relog within 5 minutes keeps the countdowns; a longer

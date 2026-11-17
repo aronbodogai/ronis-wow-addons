@@ -159,6 +159,7 @@ function mock.NewSession(opts)
         self._scripts[name] = function(...) if old then old(...) end fn(...) end
     end
     function FrameMethods:RegisterEvent(e) self._events[e] = true end
+    function FrameMethods:RegisterUnitEvent(e) self._events[e] = true end
     function FrameMethods:UnregisterEvent(e) self._events[e] = nil end
     function FrameMethods:EnableMouse() end
     function FrameMethods:SetMovable() end
@@ -350,9 +351,26 @@ function mock.NewSession(opts)
         local p2 = yards and { x = yards / 10000, y = 0 } or nil
         S.taxiNodes = { { from, "CURRENT", p1 }, { to, "REACHABLE", p2 } }
         env.TakeTaxiNode(2)
-        S.onTaxi = true
+        S.onTaxi, S.speed = true, 30
     end
-    function S.Land() S.onTaxi = false end
+    function S.Land() S.onTaxi, S.speed = false, 0 end
+    -- landing where the taxi flag stays up (seen on the live client)
+    function S.LandStuck() S.speed = 0 end
+    -- OneForAll installed: fn(slot) -> seconds
+    function S.SetOneForAll(fn) env.OneForAll = { FlightTimeTo = fn } end
+
+    -- Crafting: queue count crafts of castSec each; the first cast starts
+    S.cast = nil
+    env.C_TradeSkillUI = { CraftRecipe = function() end }
+    env.UnitCastingInfo = function(u)
+        if u ~= "player" or not S.cast then return nil end
+        return "Craft", "Craft", 136243, S.cast[1], S.cast[2], true, "x", false, 1
+    end
+    function S.Craft(count, castSec)
+        env.C_TradeSkillUI.CraftRecipe(2329, count)
+        S.cast = { S.now * 1000, (S.now + castSec) * 1000 }
+        S.Fire("UNIT_SPELLCAST_START", "player", "cast-1", 2329)
+    end
 
     -- Buffs on the player: S.SetAuras({ "Cozy Fire", ... })
     env.C_UnitAuras = {
