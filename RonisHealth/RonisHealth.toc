@@ -3,6 +3,8 @@
 ## Notes: Gentle reminders for eye breaks (20-20-20) and squat breaks while you play.
 ## Author: Roni
 ## Version: @project-version@
+## X-Curse-Project-ID: 1812440
+## X-Wago-ID: v63QgBGb
 ## SavedVariables: RonisHealthDB
 ## IconTexture: Interface\Icons\Spell_Holy_MindVision
 
