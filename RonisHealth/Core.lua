@@ -22,7 +22,7 @@ local DEFAULTS = {
     snooze = 5,          -- minutes
     sound = true,
     pauseAFK = true,     -- timers stop while you are flagged AFK
-    quietInstances = false, -- no reminders inside dungeons and raids
+    quietInstances = true, -- hold reminders inside dungeons and raids, sum them up after
 }
 ns.DEFAULTS = DEFAULTS
 
@@ -103,6 +103,12 @@ function ns.Record(kind, reps)
     end
 end
 
+function ns.RecordMissed(n)
+    local s = Stats()
+    s.today.missed = (s.today.missed or 0) + n
+    s.total.missed = (s.total.missed or 0) + n
+end
+
 function ns.RecordSkip()
     local s = Stats()
     s.today.skipped = (s.today.skipped or 0) + 1
@@ -117,7 +123,7 @@ function ns.InCombat()
     return UnitAffectingCombat and UnitAffectingCombat("player") and true or false
 end
 
-local function InQuietInstance()
+function ns.InQuietInstance()
     if not ns.db.quietInstances or not IsInInstance then return false end
     local inside, kind = IsInInstance()
     return inside and (kind == "party" or kind == "raid") or false
@@ -126,8 +132,54 @@ end
 -- Why a due reminder has to wait, or nil when it can show now.
 function ns.Blocker()
     if ns.InCombat() then return "combat" end
-    if InQuietInstance() then return "instance" end
+    if ns.InQuietInstance() then return "instance" end
     return nil
+end
+
+---------------------------------------------------------------------------
+-- Dungeon and raid runs: with "quiet in instances" on, reminders do not pop
+-- up inside. Their clocks keep running and each time one runs out it counts
+-- as missed; leaving shows one summary card instead of a pile of reminders.
+-- ns.trip = { name, start (time()), missed = { eye = n, squat = n } },
+-- kept in the saved variables so a /reload inside does not lose it.
+---------------------------------------------------------------------------
+local function InstanceName()
+    if GetInstanceInfo then
+        local name = GetInstanceInfo()
+        if name and name ~= "" then return name end
+    end
+    return "the dungeon"
+end
+
+local function StartTrip()
+    ns.trip = { name = InstanceName(), start = time(), missed = { eye = 0, squat = 0 } }
+    ns.db.trip = ns.trip
+end
+
+local function EndTrip()
+    local trip = ns.trip
+    ns.trip, ns.db.trip = nil, nil
+    local any = false
+    for _, kind in ipairs(ns.KINDS) do
+        local n = trip.missed[kind] or 0
+        if n > 0 then
+            any = true
+            ns.RecordMissed(n)
+            -- the summary offers this break now, so its clock starts over
+            ns.Reset(kind)
+        end
+    end
+    if any then
+        trip.stop = time()
+        ns.pendingSummary = trip
+    end
+end
+
+-- How many breaks a trip has missed so far.
+function ns.TripMissed(trip)
+    local n = 0
+    for _, kind in ipairs(ns.KINDS) do n = n + (trip.missed[kind] or 0) end
+    return n
 end
 
 local function IsAFK()
@@ -157,6 +209,14 @@ function ns.Tick()
     local dt = lastTick and math.max(0, now - lastTick) or 0
     lastTick = now
 
+    -- entering or leaving a dungeon/raid (with quiet instances on)
+    local quiet = ns.InQuietInstance()
+    if quiet and not ns.trip then
+        StartTrip()
+    elseif not quiet and ns.trip then
+        EndTrip()
+    end
+
     -- AFK: stop the clocks; coming back after a while counts as an eye break
     if ns.db.pauseAFK then
         if IsAFK() then
@@ -170,9 +230,23 @@ function ns.Tick()
     end
     if ns.Paused() then return end
 
+    if ns.pendingSummary and not ns.Blocker() then
+        local trip = ns.pendingSummary
+        ns.pendingSummary = nil
+        ns.ShowSummary(trip)
+    end
+
     for _, kind in ipairs(ns.KINDS) do
         if ns.Enabled(kind) and not ns.Showing(kind) then
-            if ns.due[kind] then
+            if ns.trip then
+                -- inside: count each interval that runs out as a missed break
+                ns.due[kind] = nil
+                ns.left[kind] = (ns.left[kind] or ns.Interval(kind)) - dt
+                if ns.left[kind] <= 0 then
+                    ns.trip.missed[kind] = (ns.trip.missed[kind] or 0) + 1
+                    ns.left[kind] = ns.Interval(kind)
+                end
+            elseif ns.due[kind] then
                 TryShow(kind)
             else
                 ns.left[kind] = (ns.left[kind] or ns.Interval(kind)) - dt
@@ -247,6 +321,13 @@ local function Init()
     if not ns.MOVES[db.squat.move] then db.squat.move = DEFAULTS.squat.move end
     Stats()
     RestoreClock()
+    -- a run in progress survives a /reload; an old one is forgotten
+    local c = db.clock
+    if db.trip and c and c.at and time() - c.at < ns.AWAY_RESET and type(db.trip.missed) == "table" then
+        ns.trip = db.trip
+    else
+        db.trip = nil
+    end
 end
 
 ---------------------------------------------------------------------------
@@ -265,6 +346,7 @@ function ns.SetEnabled(kind, on)
     ns.db[kind].enabled = on and true or false
     if on then ns.Reset(kind) else
         ns.due[kind] = nil
+        if ns.trip then ns.trip.missed[kind] = 0 end -- turned off: not missed
         ns.HideReminder(kind)
     end
 end
@@ -292,6 +374,13 @@ end
 
 function ns.Resume()
     ns.pausedUntil = 0
+end
+
+-- "25 min" / "1 h 12 min"
+function ns.Duration(sec)
+    local m = math.floor(math.max(0, sec or 0) / 60 + 0.5)
+    if m < 60 then return ("%d min"):format(m) end
+    return ("%d h %d min"):format(math.floor(m / 60), m % 60)
 end
 
 -- "12:05" style countdown
@@ -323,9 +412,11 @@ function ns.StatusLines()
             out[#out + 1] = name .. ": off"
         elseif ns.Showing(kind) then
             out[#out + 1] = name .. ": showing now"
+        elseif ns.trip then
+            out[#out + 1] = ("%s: held in %s, %d missed so far"):format(
+                name, ns.trip.name, ns.trip.missed[kind] or 0)
         elseif ns.due[kind] then
-            out[#out + 1] = name .. ": due, waiting until " .. (ns.Blocker() == "instance"
-                and "you leave the instance" or "combat ends")
+            out[#out + 1] = name .. ": due, waiting until combat ends"
         else
             out[#out + 1] = name .. ": in " .. ns.Clock(ns.left[kind])
         end
@@ -337,8 +428,8 @@ function ns.StatsLines()
     local s = Stats()
     local t, a = s.today, s.total
     return {
-        ("Today: %d eye breaks, %d squat breaks (%d reps), %d skipped."):format(
-            t.eye or 0, t.squat or 0, t.reps or 0, t.skipped or 0),
+        ("Today: %d eye breaks, %d squat breaks (%d reps), %d skipped, %d missed in dungeons."):format(
+            t.eye or 0, t.squat or 0, t.reps or 0, t.skipped or 0, t.missed or 0),
         ("All time: %d eye breaks, %d squat breaks (%d reps)."):format(a.eye or 0, a.squat or 0, a.reps or 0),
     }
 end

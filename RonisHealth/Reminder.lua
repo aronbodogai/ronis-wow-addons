@@ -151,7 +151,8 @@ local function Primary(card)
     end
 end
 
-local function Build(kind)
+-- The frame, look, icon and texts every card shares.
+local function Shell(kind)
     local card = CreateFrame("Frame", "RonisHealthCard_" .. kind, UIParent, "BackdropTemplate")
     card.kind = kind
     card:SetWidth(WIDTH)
@@ -180,7 +181,11 @@ local function Build(kind)
     card.action = Text(card, "GameFontHighlight")
     card.why = Text(card, "GameFontDisableSmall")
     card.more = Text(card, "GameFontHighlightSmall")
+    return card
+end
 
+local function Build(kind)
+    local card = Shell(kind)
     card.primary = Button(card, "", 132, function() Primary(card) end)
     card.snooze = Button(card, "Snooze", 70, function()
         ns.Snooze(kind)
@@ -237,6 +242,69 @@ function ns.ShowReminder(kind)
     Fill(card)
     card:Show()
     order[#order + 1] = kind
+    Layout(card)
+    Sound("TELL_MESSAGE", 3081)
+    if FlashClientIcon then FlashClientIcon() end
+end
+
+---------------------------------------------------------------------------
+-- After a dungeon or raid: one card with what was missed inside
+---------------------------------------------------------------------------
+local function BuildSummary()
+    local card = Shell("summary")
+    card.eyeButton = Button(card, "Eye break now", 116, function(self)
+        self:Disable()
+        ns.ShowReminder("eye")
+        card.CheckDone()
+    end)
+    card.squatButton = Button(card, "Squat break now", 128, function(self)
+        self:Disable()
+        ns.ShowReminder("squat")
+        card.CheckDone()
+    end)
+    card.dismiss = Button(card, "Dismiss", 76, function() Close(card) end)
+    -- close once every offered break has been opened
+    function card.CheckDone()
+        for _, b in ipairs(card.buttons) do
+            if b ~= card.dismiss and b:IsEnabled() then return end
+        end
+        Close(card)
+    end
+    card:Hide()
+    cards.summary = card
+    return card
+end
+
+function ns.ShowSummary(trip)
+    if not anchor.placed then
+        PlaceAnchor()
+        anchor.placed = true
+    end
+    local card = cards.summary or BuildSummary()
+    local T = ns.TEXT.summary
+    card.title:SetText(T.Title(trip))
+    card.action:SetText(T.Action(trip))
+    card.why:SetText(T.why)
+    card.more:SetText("")
+    card.expanded = false
+    card.icon:SetTexture(T.icon)
+    -- one button per reminder that was missed (and is still turned on)
+    card.buttons = {}
+    for _, kind in ipairs(ns.KINDS) do
+        local b = card[kind .. "Button"]
+        if (trip.missed[kind] or 0) > 0 and ns.Enabled(kind) then
+            b:Enable()
+            b:Show()
+            card.buttons[#card.buttons + 1] = b
+        else
+            b:Hide()
+        end
+    end
+    card.buttons[#card.buttons + 1] = card.dismiss
+    if not card:IsShown() then
+        card:Show()
+        table.insert(order, 1, "summary")
+    end
     Layout(card)
     Sound("TELL_MESSAGE", 3081)
     if FlashClientIcon then FlashClientIcon() end
