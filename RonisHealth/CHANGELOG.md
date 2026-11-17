@@ -1,5 +1,12 @@
 # Roni's Health
 
+## Unreleased
+
+- **Dungeon and raid summary:** reminders are held inside dungeons and
+  raids (now on by default). Leaving shows one "Back from <instance>" card
+  with how long you were in and which breaks you missed, plus a button to
+  take each one now. Missed breaks count in the stats.
+
 ## v0.1.0
 
 First release.
@@ -12,8 +19,5 @@ First release.
   Athletic 20 slow squats), then change the move and reps to suit you.
 - Every card has a one-line reason and a **More** button with the longer
   explanation, what the evidence does and does not show, and safety notes.
-- Dungeons and raids: reminders are held inside, and leaving shows one
-  card summing up the time inside and the breaks you missed, with a button
-  to take each one now.
 - Reminders wait until combat ends, the clock stops while you are AFK, and
   a short /reload keeps the countdown. Snooze, skip, pause, daily stats.
