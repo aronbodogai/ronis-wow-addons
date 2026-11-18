@@ -166,6 +166,16 @@ function mock.NewSession(opts)
     function FrameMethods:RegisterForDrag() end
     function FrameMethods:SetClampedToScreen() end
     function FrameMethods:SetFrameStrata() end
+    function FrameMethods:SetFrameLevel() end
+    function FrameMethods:EnableMouseWheel() end
+    function FrameMethods:SetAllPoints() end
+    function FrameMethods:GetCenter() return 0, 0 end
+    function FrameMethods:GetEffectiveScale() return 1 end
+    -- ScrollFrame
+    function FrameMethods:SetScrollChild(c) self._scrollChild = c end
+    function FrameMethods:GetScrollChild() return self._scrollChild end
+    function FrameMethods:SetVerticalScroll(v) self._vscroll = v end
+    function FrameMethods:GetVerticalScroll() return self._vscroll or 0 end
     function FrameMethods:StartMoving() end
     function FrameMethods:StopMovingOrSizing() end
     function FrameMethods:CreateFontString(name)
@@ -184,6 +194,8 @@ function mock.NewSession(opts)
         SetBackdropColor = function() end, SetBackdropBorderColor = function() end,
     }
     local ButtonMethods = {
+        RegisterForClicks = function() end,
+        SetMotionScriptsWhileDisabled = function() end,
         SetText = function(self, t) self._text = t end,
         GetText = function(self) return self._text end,
         SetEnabled = function(self, v) self._enabled = v and true or false end,
@@ -244,6 +256,16 @@ function mock.NewSession(opts)
 
     env.UIParent = env.CreateFrame("Frame", "UIParent")
     env.UISpecialFrames = {}
+    env.Minimap = env.CreateFrame("Frame", "Minimap", env.UIParent)
+    env.GetCursorPosition = function() return 0, 0 end
+    env.GameTooltip = env.CreateFrame("Frame", "GameTooltip", env.UIParent)
+    env.GameTooltip:Hide()
+    env.GameTooltip._kindMethods.SetOwner = function(self, owner) self._owner = owner; self._lines = {} end
+    env.GameTooltip._kindMethods.AddLine = function(self, text) self._lines[#self._lines + 1] = text end
+    env.GameTooltip._kindMethods.Show = function(self) self._shown = true end
+    -- folders in the AddOns list: S.addonFolders.RonisMailMats = true
+    S.addonFolders = { RonisHealth = true }
+    env.C_AddOns = { DoesAddOnExist = function(name) return S.addonFolders[name] or false end }
     env.SlashCmdList = {}
     env.SOUNDKIT = { TELL_MESSAGE = 3081, READY_CHECK = 8960 }
 

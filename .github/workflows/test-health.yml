@@ -7,10 +7,12 @@ on:
   push:
     paths:
       - 'RonisHealth/**'
+      - '*/RonisHub.lua' # the shared copies must stay identical
       - '.github/workflows/test-health.yml'
   pull_request:
     paths:
       - 'RonisHealth/**'
+      - '*/RonisHub.lua' # the shared copies must stay identical
       - '.github/workflows/test-health.yml'
   workflow_dispatch:
 

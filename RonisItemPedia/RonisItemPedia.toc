@@ -9,6 +9,7 @@
 ## OptionalDeps: QuestieDB, Questie, Auctionator
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
 
+RonisHub.lua
 Data\Recipes.lua
 Data\ClassSpells.lua
 Data\ItemNames.lua

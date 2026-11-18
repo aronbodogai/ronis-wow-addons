@@ -210,6 +210,12 @@ function mock.NewSession(opts)
     function FrameMethods:RegisterForClicks() end
     function FrameMethods:SetClampedToScreen() end
     function FrameMethods:SetFrameStrata() end
+    function FrameMethods:SetMotionScriptsWhileDisabled() end
+    function FrameMethods:EnableMouseWheel() end
+    -- ScrollFrame
+    function FrameMethods:SetScrollChild(c) self._scrollChild = c end
+    function FrameMethods:SetVerticalScroll(v) self._vscroll = v end
+    function FrameMethods:GetVerticalScroll() return self._vscroll or 0 end
     function FrameMethods:SetFrameLevel() end
     function FrameMethods:StartMoving() end
     function FrameMethods:StopMovingOrSizing() end
@@ -303,6 +309,7 @@ function mock.NewSession(opts)
     env.UIParent = env.CreateFrame("Frame", "UIParent")
 
     env.Minimap = env.CreateFrame("Frame", "Minimap", env.UIParent)
+    env.C_AddOns = { DoesAddOnExist = function(name) return name == "RonisMailMats" end }
     env.UISpecialFrames = {}
     env.GetCursorPosition = function() return 0, 0 end
 

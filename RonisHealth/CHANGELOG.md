@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **One minimap button for all Roni's addons.** Click it for a window with a
+  tab per addon. Tabs of Roni's addons you don't have are greyed out;
+  hovering one says whether it is not installed or turned off.
+  `/health` opens the Health tab.
 - **Bedtime** (off by default: options or `/health bed on`). At 22:30 one
   card says not to start a new dungeon and to switch to easy stuff: queue up
   some crafting, brush your teeth or shower while it runs. Inside a dungeon

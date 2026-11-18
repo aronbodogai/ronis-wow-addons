@@ -9,6 +9,7 @@
 ## SavedVariables: RonisMailMatsDB
 ## IconTexture: Interface\Icons\INV_Letter_15
 
+RonisHub.lua
 Data\Reagents.lua
 Data\SkillItems.lua
 Data\Messages.lua

@@ -1,7 +1,7 @@
 -- Roni's Health - options window (/health).
 local ADDON, ns = ...
 
-local W, PAD = 440, 16
+local W, PAD = 432, 4
 local win
 local refreshers = {} -- functions that re-read the settings into the widgets
 
@@ -58,35 +58,19 @@ local function Stepper(parent, lim, get, set, fmt)
     return f
 end
 
-local function Build()
-    win = CreateFrame("Frame", "RonisHealthOptions", UIParent, "BackdropTemplate")
+-- Fills Health's tab in the Roni's addons window (RonisHub.lua) and
+-- returns the height used.
+local function Build(page)
+    W = page:GetWidth()
+    win = CreateFrame("Frame", "RonisHealthOptions", page)
+    win:SetPoint("TOPLEFT", page, "TOPLEFT", 0, 0)
     win:SetWidth(W)
-    win:SetPoint("CENTER", UIParent, "CENTER", 0, 40)
-    win:SetFrameStrata("DIALOG")
-    win:SetClampedToScreen(true)
-    win:SetMovable(true)
-    win:EnableMouse(true)
-    win:RegisterForDrag("LeftButton")
-    win:SetScript("OnDragStart", win.StartMoving)
-    win:SetScript("OnDragStop", win.StopMovingOrSizing)
-    win:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8X8",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = false, edgeSize = 16,
-        insets = { left = 4, right = 4, top = 4, bottom = 4 },
-    })
-    win:SetBackdropColor(0.06, 0.06, 0.07, 1)
-    win:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
-    tinsert(UISpecialFrames, "RonisHealthOptions") -- Escape closes it
 
     local y = PAD
     local function Row(widget, x, h, gap)
         widget:SetPoint("TOPLEFT", win, "TOPLEFT", x or PAD, -y)
         y = y + (h or 22) + (gap or 6)
     end
-
-    local title = Label(win, "GameFontNormalLarge", "Roni's Health")
-    Row(title, nil, 18, 10)
 
     -- Eye breaks -----------------------------------------------------------
     Row(Label(win, "GameFontNormal", ns.TEXT.eye.name), nil, 14, 4)
@@ -231,8 +215,6 @@ local function Build()
     tSq:SetPoint("LEFT", tEye, "RIGHT", 6, 0)
     local pos = Btn(win, "Reset position", 110, function() ns.ResetPosition() end)
     pos:SetPoint("LEFT", tSq, "RIGHT", 6, 0)
-    local close = Btn(win, "Close", 60, function() win:Hide() end)
-    close:SetPoint("TOPRIGHT", win, "TOPRIGHT", -PAD, -y)
     y = y + 22 + PAD
     win:SetHeight(y)
 
@@ -240,7 +222,7 @@ local function Build()
     -- (one loop per opening: an old loop stops when its token is replaced)
     local live
     local function Live(token)
-        if live ~= token or not win:IsShown() then return end
+        if live ~= token or not win:IsVisible() then return end
         Refresh()
         C_Timer.After(1, function() Live(token) end)
     end
@@ -250,12 +232,12 @@ local function Build()
         local token = live
         C_Timer.After(1, function() Live(token) end)
     end)
-    win:Hide()
+    return y
 end
+ns.BuildOptions = Build
 
 function ns.ToggleOptions()
-    if not win then Build() end
-    if win:IsShown() then win:Hide() else win:Show() end
+    RonisHub:Toggle("health")
 end
 
 function ns.OptionsFrame() return win end

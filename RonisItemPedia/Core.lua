@@ -238,6 +238,7 @@ f:SetScript("OnEvent", function(_, event, arg1)
     if event == "ADDON_LOADED" and arg1 == ADDON then
         InitDB()
         BuildIndex()
+        RonisHub:Register("itempedia", { db = ns.db, build = ns.BuildHubPage })
     elseif event == "PLAYER_LOGIN" then
         InstallHooks()
         C_Timer.After(5, function() pcall(ns.StartQuestScan) end) -- let login settle first
@@ -290,3 +291,28 @@ SlashCmdList.RONISITEMPEDIA = function(msg)
         if link then ns.Open(link) else ns.Print("no cached item matches '" .. msg .. "'.") end
     end
 end
+
+---------------------------------------------------------------------------
+-- Tab in the shared Roni's addons window (RonisHub.lua, minimap button)
+---------------------------------------------------------------------------
+local function BuildHubPage(page)
+    local H = RonisHub
+    local w = page:GetWidth()
+    local y = 4
+    local intro = H:Label(page, "Alt + Left-Click any item to open it. /pedia <name> looks an item up by name.",
+        "GameFontHighlight", w)
+    intro:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -y)
+    y = y + 36
+    local open = H:Button(page, "Open ItemPedia", 130, function() ns.Toggle() end)
+    open:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -y)
+    local reset = H:Button(page, "Reset window position", 160, function()
+        SlashCmdList.RONISITEMPEDIA("reset")
+    end)
+    reset:SetPoint("LEFT", open, "RIGHT", 6, 0)
+    y = y + 34
+    local more = H:Label(page, "Every icon in the window is clickable. Your mouse's side buttons go back and forward.",
+        "GameFontDisableSmall", w)
+    more:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -y)
+    return y + 30
+end
+ns.BuildHubPage = BuildHubPage

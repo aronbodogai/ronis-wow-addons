@@ -931,8 +931,10 @@ SlashCmdList.RONISMAILMATS = function(msg)
         ns.Print(ns.db.noMessage and "Drafts get no message. /mailmats message on turns it back on."
             or ("Drafts get a random message (%d to pick from). /mailmats message off turns it off."):format(#(ns.MESSAGES or {})))
     elseif cmd == "minimap" then
-        ns.SetMinimapShown(ns.db.hideMinimap and true or false)
-        ns.Print(ns.db.hideMinimap and "Minimap button hidden. /mailmats minimap shows it again." or "Minimap button shown.")
+        ns.SetMinimapShown(not RonisHub:ButtonShown())
+        ns.Print(RonisHub:ButtonShown() and "Minimap button shown." or "Minimap button hidden. /mailmats minimap shows it again.")
+    elseif cmd == "options" or cmd == "config" then
+        RonisHub:Toggle("mailmats")
     elseif cmd == "scan" then
         ns.ScanSkills(true)
         ns.Print(ns.me .. ": " .. ProfString(ns.MyChar()))
@@ -957,7 +959,7 @@ SlashCmdList.RONISMAILMATS = function(msg)
         end
         ns.Print("/mailmats scan | selftest | forget <name> | ignore <item> | unignore <item> | ignored")
         ns.Print("/mailmats target <first last>: <category>, ... | untarget <first last> | targets")
-        ns.Print("/mailmats groups [group] | minimap | ahead <levels> | cod <percent>|off | greens on|off | message on|off")
+        ns.Print("/mailmats options | groups [group] | minimap | ahead <levels> | cod <percent>|off | greens on|off | message on|off")
     end
 end
 

@@ -1,5 +1,12 @@
 # Roni's ItemPedia
 
+## Unreleased
+
+- **One minimap button for all Roni's addons.** Click it for a window with a
+  tab per addon. Tabs of Roni's addons you don't have are greyed out;
+  hovering one says whether it is not installed or turned off.
+  The ItemPedia tab opens the item window and resets its position.
+
 ## v0.6.0
 
 Roni's MailMats is its own download again. Since v0.5.0 this project shipped

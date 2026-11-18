@@ -685,19 +685,44 @@ return function(T)
         eq(table.concat(S.env.RonisMailMatsDB.targets[REALM].Bob.cats, ","), "Tailoring", "taken off the recipient")
     end)
 
-    test("minimap button opens the groups window and can be hidden", function()
+    test("the Roni's minimap button opens the MailMats tab and can be hidden", function()
         local S = MainAtMailbox(nil)
-        local b = S.env.RonisMailMatsMinimapButton
+        local b = S.env.RonisHubMinimapButton
         ok(b and b:IsShown(), "button shown")
         eq(b:GetParent(), S.env.Minimap, "on the minimap")
         b._scripts.OnClick(b, "LeftButton")
-        ok(Win(S):IsShown(), "window opened")
+        local hub = S.env.RonisHub
+        ok(S.env.RonisHubFrame:IsShown(), "Roni's window opened")
+        eq(hub.selected, "mailmats", "on the MailMats tab")
+        ok(not hub.tabs.health:IsEnabled(), "Health not installed here")
+        -- the tab's buttons and settings
+        local groups, greens
+        for _, f in ipairs(S.frames) do
+            if f._type == "Button" and f:GetText() == "Item groups" then groups = f end
+            if f._type == "CheckButton" and f.Text and tostring(f.Text:GetText()):find("BoE green") then greens = f end
+        end
+        groups:Click()
+        ok(Win(S):IsShown(), "groups window opened")
+        ok(greens:GetChecked(), "greens on by default")
+        greens:Click()
+        ok(S.env.RonisMailMatsDB.noGreens, "greens off")
         b._scripts.OnClick(b, "LeftButton")
-        ok(not Win(S):IsShown(), "toggled closed")
+        ok(not S.env.RonisHubFrame:IsShown(), "toggled closed")
         S.Slash("/mailmats", "minimap")
         ok(not b:IsShown(), "hidden")
         local S2 = MainAtMailbox(T.Logout(S))
-        ok(not S2.env.RonisMailMatsMinimapButton:IsShown(), "stays hidden after relog")
+        ok(not S2.env.RonisHubMinimapButton:IsShown(), "stays hidden after relog")
+    end)
+
+    test("the old minimap button's place and hidden state carry over", function()
+        local saved = T.Logout(MainAtMailbox(nil))
+        saved.RonisMailMatsDB.hub = nil
+        saved.RonisMailMatsDB.minimapAngle = 45
+        saved.RonisMailMatsDB.hideMinimap = true
+        local S = MainAtMailbox(saved)
+        eq(S.env.RonisHub:Get("angle"), 45)
+        ok(not S.env.RonisHubMinimapButton:IsShown(), "still hidden")
+        eq(S.env.RonisMailMatsDB.minimapAngle, nil, "old field cleared")
     end)
 
     -----------------------------------------------------------------------

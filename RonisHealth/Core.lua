@@ -448,6 +448,8 @@ local function Init()
     Stats()
     ns.CheckProgress()
     RestoreClock()
+    -- a tab in the shared Roni's addons window and its minimap button
+    RonisHub:Register("health", { db = db, build = ns.BuildOptions })
     -- a run in progress survives a /reload; an old one is forgotten
     local c = db.clock
     if db.trip and c and c.at and time() - c.at < ns.AWAY_RESET and type(db.trip.missed) == "table" then

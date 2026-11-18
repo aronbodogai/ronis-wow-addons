@@ -9,6 +9,7 @@
 ## SavedVariables: RonisHealthDB
 ## IconTexture: Interface\Icons\Spell_Holy_MindVision
 
+RonisHub.lua
 Data\Texts.lua
 Core.lua
 Moments.lua

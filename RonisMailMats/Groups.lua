@@ -306,64 +306,61 @@ function ns.ToggleGroups(cat)
 end
 
 ---------------------------------------------------------------------------
--- Minimap button (drag it around the minimap; /mailmats minimap hides it)
+-- Minimap button: the shared Roni's addons button (RonisHub.lua) now; its
+-- MailMats tab opens the groups window. The old button's place and
+-- hidden state carry over.
 ---------------------------------------------------------------------------
-local mini
-
-local function PlaceMini()
-    local angle = math.rad(ns.db.minimapAngle or 200)
-    local r = 80
-    mini:ClearAllPoints()
-    mini:SetPoint("CENTER", Minimap, "CENTER", math.cos(angle) * r, math.sin(angle) * r)
-end
-
-local function DragMini(self)
-    local mx, my = Minimap:GetCenter()
-    local cx, cy = GetCursorPosition()
-    local scale = Minimap:GetEffectiveScale()
-    ns.db.minimapAngle = math.deg((math.atan2 or math.atan)(cy / scale - my, cx / scale - mx))
-    PlaceMini()
-end
-
 function ns.InitMinimap()
-    if mini or not Minimap then return end
-    mini = CreateFrame("Button", "RonisMailMatsMinimapButton", Minimap)
-    mini:SetSize(31, 31)
-    mini:SetFrameStrata("MEDIUM")
-    mini:SetFrameLevel(8)
-    mini:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    mini:RegisterForDrag("LeftButton")
-    local icon = mini:CreateTexture(nil, "BACKGROUND")
-    icon:SetSize(20, 20)
-    icon:SetPoint("CENTER", 0, 1)
-    icon:SetTexture(ns.UPGRADE_ICON or "Interface\\Icons\\INV_Letter_15")
-    local border = mini:CreateTexture(nil, "OVERLAY")
-    border:SetSize(53, 53)
-    border:SetPoint("TOPLEFT")
-    border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
-    mini:SetScript("OnClick", function(_, button)
-        if button == "RightButton" then
-            SlashCmdList.RONISMAILMATS("")
-        else
-            ns.ToggleGroups()
-        end
-    end)
-    mini:SetScript("OnDragStart", function(self) self:SetScript("OnUpdate", DragMini) end)
-    mini:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
-    mini:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine(ns.TAG)
-        GameTooltip:AddLine("Left-click: view and edit item groups", 1, 1, 1)
-        GameTooltip:AddLine("Right-click: list your characters", 1, 1, 1)
-        GameTooltip:AddLine("Drag: move this button", 0.6, 0.6, 0.6)
-        GameTooltip:Show()
-    end)
-    mini:SetScript("OnLeave", function() GameTooltip:Hide() end)
-    PlaceMini()
-    mini:SetShown(not ns.db.hideMinimap)
+    local db = ns.db
+    db.hub = db.hub or {}
+    if db.minimapAngle and db.hub.angle == nil then db.hub.angle = db.minimapAngle end
+    if db.hideMinimap and db.hub.hideButton == nil then db.hub.hideButton = true end
+    db.minimapAngle, db.hideMinimap = nil, nil
+    RonisHub:Register("mailmats", { db = db, build = ns.BuildHubPage })
 end
 
 function ns.SetMinimapShown(show)
-    ns.db.hideMinimap = not show
-    if mini then mini:SetShown(show) end
+    RonisHub:SetButtonShown(show)
+end
+
+-- The MailMats tab in the Roni's addons window.
+function ns.BuildHubPage(page)
+    local H = RonisHub
+    local w = page:GetWidth()
+    local function Changed() if ns.Refresh then ns.Refresh() end end
+    local y = 4
+    local function Row(widget, x, h)
+        widget:SetPoint("TOPLEFT", page, "TOPLEFT", x or 4, -y)
+        y = y + (h or 22) + 6
+    end
+
+    Row(H:Label(page, "Open a mailbox: each alt gets a button that drafts a mail with the mats it can use. "
+        .. "Nothing is sent until you press Send.", "GameFontHighlight", w), nil, 30)
+    local groups = H:Button(page, "Item groups", 110, function() ns.ToggleGroups() end)
+    groups:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -y)
+    local chars = H:Button(page, "List my characters", 140, function() SlashCmdList.RONISMAILMATS("") end)
+    chars:SetPoint("LEFT", groups, "RIGHT", 6, 0)
+    y = y + 34
+
+    Row(H:Check(page, page, "Send BoE green gear to enchanters", function() return not ns.db.noGreens end,
+        function(v) ns.db.noGreens = (not v) or nil; Changed() end), nil, 22)
+    Row(H:Check(page, page, "Add a random message to drafts", function() return not ns.db.noMessage end,
+        function(v) ns.db.noMessage = (not v) or nil end), nil, 22)
+
+    local cod = H:Label(page, "Cash on delivery for greens to other players:")
+    cod:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -y - 4)
+    y = y + 22
+    Row(H:Stepper(page, page, 0, 200, 10, function() return ns.CODPercent() end,
+        function(v) ns.db.greenCOD = v > 0 and v or false; Changed() end,
+        function(v) return v == 0 and "off" or (v .. "% of vendor price") end), 24, 22)
+
+    local ahead = H:Label(page, "Upgrades for alts who can wear them within:")
+    ahead:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -y - 4)
+    y = y + 22
+    Row(H:Stepper(page, page, 0, 20, 1, function() return ns.UpgradeAhead() end,
+        function(v) ns.db.upgradeAhead = v; Changed() end,
+        function(v) return v == 0 and "now only" or (v .. " level" .. (v == 1 and "" or "s")) end), 24, 22)
+
+    Row(H:Label(page, "Recipients and more: /mailmats", "GameFontDisableSmall", w), nil, 14)
+    return y
 end

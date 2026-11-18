@@ -1,5 +1,15 @@
 # Roni's MailMats
 
+## Unreleased
+
+- **One minimap button for all Roni's addons.** Click it for a window with a
+  tab per addon. Tabs of Roni's addons you don't have are greyed out;
+  hovering one says whether it is not installed or turned off.
+  It replaces MailMats' own button (its place and hidden state carry over).
+  The MailMats tab opens item groups and the character list, and has the
+  greens, message, cash on delivery and upgrade settings.
+  `/mailmats options` opens it; `/mailmats minimap` still hides the button.
+
 ## v0.12.0
 
 First release as its own addon. Until now MailMats was only available inside

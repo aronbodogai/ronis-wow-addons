@@ -267,6 +267,27 @@ levels are chosen by effort, not age or weight (NHS strength exercises,
 ACSM/AHA). Tests: `cd RonisHealth/tests && npm install && npm test`
 (same harness as MailMats, `.github/workflows/test-health.yml`).
 
+## Shared minimap button and options window (`RonisHub.lua`)
+
+Every addon ships an identical `RonisHub.lua` (the Health tests fail if the
+copies differ; the Health workflow runs when any copy changes). It is a
+small versioned library on the global `RonisHub`: the newest copy loaded
+replaces the functions, and the window and button are built at login.
+
+- One minimap button (`RonisHubMinimapButton`): click toggles the window,
+  drag moves it. Position and "hidden" are written to `db.hub` of every
+  registered addon, so they survive uninstalling any one of them.
+- The window (`RonisHubFrame`) has a tab per known addon (`Hub.KNOWN`):
+  Health, ItemPedia, MailMats. An addon joins with
+  `RonisHub:Register(key, { db = savedVars, build = function(page) ... return height end })`;
+  `build` runs on first view. Unregistered tabs are disabled; hovering says
+  "Not installed" or, when `C_AddOns.DoesAddOnExist` finds the folder,
+  "turned off in the AddOns list". Long pages scroll with the mouse wheel.
+- Helpers for pages: `RonisHub:Label`, `:Button`, `:Check`, `:Stepper`
+  (checks and steppers re-read their value whenever the page is shown).
+- To change it: edit `RonisHealth/RonisHub.lua`, raise `VERSION`, copy it
+  to the other addon folders.
+
 ## Guides site
 
 `site/` is a plain HTML site (no build step) published to

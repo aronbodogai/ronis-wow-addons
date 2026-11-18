@@ -345,11 +345,11 @@ return function(T)
     test("options window: levels set move and reps, steppers obey limits", function()
         local S = T.Login()
         S.Slash("/health", "")
-        local win = S.env.RonisHealthOptions
+        local win = S.env.RonisHubFrame
         ok(win:IsShown(), "window open")
         local gentle
         for _, f in ipairs(S.frames) do
-            if f._type == "Button" and f._parent == win and f:GetText() == "Gentle" then gentle = f end
+            if f._type == "Button" and f._parent == S.env.RonisHealthOptions and f:GetText() == "Gentle" then gentle = f end
         end
         ok(gentle, "Gentle button")
         Click(gentle)
@@ -815,5 +815,98 @@ return function(T)
         eq(S.ns.db.bedtime.windDown, 22 * 60 + 45)
         S.Slash("/health", "bed off")
         ok(not S.ns.db.bedtime.enabled, "/health bed off")
+    end)
+
+    -----------------------------------------------------------------------
+    -- Roni's addons hub: minimap button and tabbed window
+    -----------------------------------------------------------------------
+    test("minimap button opens the Roni's window on the Health tab", function()
+        local S = T.Login()
+        local hub = S.env.RonisHub
+        local b = S.env.RonisHubMinimapButton
+        ok(b and b:IsShown(), "minimap button")
+        b._scripts.OnClick(b, "LeftButton")
+        ok(S.env.RonisHubFrame:IsShown(), "window open")
+        eq(hub.selected, "health")
+        ok(S.env.RonisHealthOptions:IsVisible(), "Health options on the page")
+        ok(not hub.tabs.health:IsEnabled(), "current tab is greyed like a pressed tab")
+        b._scripts.OnClick(b, "LeftButton")
+        ok(not S.env.RonisHubFrame:IsShown(), "click again closes")
+        S.Slash("/health", "")
+        ok(S.env.RonisHubFrame:IsShown(), "/health opens it too")
+    end)
+
+    test("tabs of Roni's addons that are not installed are greyed out and say why", function()
+        local S = T.Login()
+        S.Slash("/health", "")
+        local hub = S.env.RonisHub
+        ok(not hub.tabs.itempedia:IsEnabled(), "ItemPedia greyed")
+        ok(not hub.tabs.mailmats:IsEnabled(), "MailMats greyed")
+        hub.tabs.itempedia._scripts.OnEnter(hub.tabs.itempedia)
+        contains(S.env.GameTooltip._lines, "Not installed")
+        S.addonFolders.RonisMailMats = true
+        hub.tabs.mailmats._scripts.OnEnter(hub.tabs.mailmats)
+        contains(S.env.GameTooltip._lines, "turned off in the AddOns list")
+    end)
+
+    test("another Roni's addon registering gets a working tab", function()
+        local S = T.Login()
+        local hub = S.env.RonisHub
+        local built = 0
+        local mmDB = {}
+        hub:Register("mailmats", { db = mmDB, build = function(page)
+            built = built + 1
+            page.marker = true
+            return 120
+        end })
+        S.Slash("/health", "")
+        ok(hub.tabs.mailmats:IsEnabled(), "MailMats tab active")
+        Click(hub.tabs.mailmats)
+        eq(hub.selected, "mailmats")
+        ok(hub.pages.mailmats.marker, "its page was built")
+        ok(not S.env.RonisHealthOptions:IsVisible(), "Health page hidden")
+        Click(hub.tabs.health)
+        Click(hub.tabs.mailmats)
+        eq(built, 1, "built once")
+        eq(mmDB.hub.tab, "mailmats", "last tab saved in every addon")
+        eq(S.ns.db.hub.tab, "mailmats")
+    end)
+
+    test("the minimap button keeps its place and can be hidden", function()
+        local saved
+        do
+            local S = T.Login()
+            local b = S.env.RonisHubMinimapButton
+            S.env.GetCursorPosition = function() return 0, 50 end -- straight above
+            b._scripts.OnDragStart(b)
+            b._scripts.OnUpdate(b)
+            b._scripts.OnDragStop(b)
+            eq(math.floor(S.ns.db.hub.angle + 0.5), 90)
+            S.env.RonisHub:SetButtonShown(false)
+            ok(not b:IsShown(), "hidden")
+            saved = T.Logout(S)
+        end
+        local S = T.Login({}, saved)
+        local b = S.env.RonisHubMinimapButton
+        ok(not b:IsShown(), "stays hidden after relog")
+        eq(math.floor(S.env.RonisHub:Get("angle") + 0.5), 90)
+    end)
+
+    test("loading the hub file again keeps the registered addons", function()
+        local S = T.Login()
+        local hub = S.env.RonisHub
+        local src = assert(READFILE(T.DIR .. "/RonisHub.lua"))
+        assert(load(src, "@RonisHub.lua", "t", S.env))()
+        ok(S.env.RonisHub == hub, "same table")
+        ok(hub.addons.health, "Health still registered")
+    end)
+
+    test("every Roni's addon ships the same RonisHub.lua", function()
+        local mine = assert(READFILE(T.DIR .. "/RonisHub.lua"))
+        for _, folder in ipairs({ "RonisItemPedia", "RonisMailMats" }) do
+            local other = READFILE(T.DIR .. "/../" .. folder .. "/RonisHub.lua")
+            ok(other, folder .. " has RonisHub.lua")
+            ok(other == mine, folder .. "/RonisHub.lua matches RonisHealth/RonisHub.lua")
+        end
     end)
 end
