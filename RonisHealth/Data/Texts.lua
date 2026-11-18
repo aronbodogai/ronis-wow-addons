@@ -285,8 +285,8 @@ end
 ---------------------------------------------------------------------------
 -- Bedtime cards. %s is the time.
 ---------------------------------------------------------------------------
-local WIND_WHY = "Exciting games right before bed keep you alert and push sleep later. A calm half hour helps."
-local BED_WHY = "Adults need 7 or more hours of sleep a night (AASM and Sleep Research Society)."
+local WIND_WHY = "A calm half hour before bed helps you fall asleep."
+local BED_WHY = "Aim for 7 or more hours of sleep."
 ns.TEXT.bed = {
     icon = "Interface\\Icons\\Spell_Nature_Sleep",
     wind = {
@@ -308,8 +308,8 @@ ns.TEXT.bed = {
     },
     late = {
         title = "%s: still up",
-        action = "Time to log off. This comes back every 10 minutes.",
-        why = BED_WHY,
+        action = "Time to log off.",
+        why = "",
     },
 }
 

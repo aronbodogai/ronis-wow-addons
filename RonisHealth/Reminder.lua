@@ -102,7 +102,12 @@ local function Layout(card)
         card.nag:Hide()
     end
     Put(card.action, 6)
-    Put(card.why, 8)
+    if card.why:GetText() and card.why:GetText() ~= "" then
+        card.why:Show()
+        Put(card.why, 8)
+    else
+        card.why:Hide()
+    end
     if card.expanded then
         card.more:Show()
         Put(card.more, 8)
