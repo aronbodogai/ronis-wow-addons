@@ -32,6 +32,8 @@ local DEFAULTS = {
     bedtime = { enabled = true, windDown = 22 * 60 + 30, bed = 23 * 60 },
     -- weekly squat progression: step 0 = the reps you picked
     prog = { step = 0, done = 0, skipped = 0 },
+    -- skips in a row (eye, squat) and "Not tonight" nights in a row (bed)
+    streak = { eye = 0, squat = 0, bed = 0 },
 }
 ns.DEFAULTS = DEFAULTS
 
@@ -375,6 +377,7 @@ function ns.Done(kind, reps)
     else
         ns.Record("eye")
     end
+    ns.db.streak[kind] = 0
     ns.Reset(kind)
 end
 
@@ -385,6 +388,7 @@ end
 
 function ns.Skip(kind)
     ns.RecordSkip()
+    ns.db.streak[kind] = (ns.db.streak[kind] or 0) + 1
     if kind == "squat" then
         ns.CheckProgress()
         ns.db.prog.skipped = (ns.db.prog.skipped or 0) + 1

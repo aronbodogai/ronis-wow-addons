@@ -691,6 +691,62 @@ return function(T)
         for _, t in ipairs(all) do ok(not t:find("[\128-\255]"), "ASCII: " .. t:sub(1, 40)) end
     end)
 
+    test("two skips in a row bring an orange line, Done clears it", function()
+        local S = T.Login()
+        local function InPool(kind, text)
+            for _, m in ipairs(S.ns.TEXT.nag[kind]) do
+                if text:sub(-#m) == m then return true end
+            end
+            return false
+        end
+        S.Advance(20 * MIN + 2)
+        ok(not Card(S, "eye").nag:IsShown(), "no line on the first card")
+        Click(Card(S, "eye").skip)
+        S.Advance(20 * MIN + 2)
+        ok(not Card(S, "eye").nag:IsShown(), "one skip: still nothing")
+        Click(Card(S, "eye").skip)
+        S.Advance(20 * MIN + 2)
+        local c = Card(S, "eye")
+        ok(c.nag:IsShown(), "two skips: line shown")
+        contains({ c.nag:GetText() }, "^Skipped 2 in a row%. ")
+        ok(InPool("eye", c.nag:GetText()), "a line from the eye list")
+        Click(c.skip)
+        S.Advance(20 * MIN + 2)
+        contains({ Card(S, "eye").nag:GetText() }, "^Skipped 3 in a row%. ")
+        Click(Card(S, "eye").snooze)
+        S.Advance(5 * MIN + 2)
+        contains({ Card(S, "eye").nag:GetText() }, "^Skipped 3 in a row", "snooze is not a skip")
+        S.ns.Done("eye")
+        S.ns.HideReminder("eye")
+        S.Advance(20 * MIN + 2)
+        ok(not Card(S, "eye").nag:IsShown(), "done: run over")
+        eq(S.ns.db.streak.squat, 0, "squats counted apart")
+        -- the run survives a relog
+        S.ns.db.streak.squat = 4
+        local S2 = T.Login(nil, T.Logout(S))
+        S2.Advance(40 * MIN + 2)
+        contains({ Card(S2, "squat").nag:GetText() }, "^Skipped 4 in a row%. ")
+        ok(InPool("squat", Card(S2, "squat").nag:GetText()), "a line from the squat list")
+    end)
+
+    test("escalation lines: a dozen each, short, never the same twice running", function()
+        local S = T.Login()
+        for _, kind in ipairs({ "eye", "squat", "bed" }) do
+            local pool = S.ns.TEXT.nag[kind]
+            eq(#pool, 12, kind .. " has a dozen")
+            for _, m in ipairs(pool) do ok(#m <= 50, "short: " .. m) end
+            S.ns.db.streak[kind] = 5
+            local last
+            for _ = 1, 40 do
+                local t = S.ns.Nag(kind)
+                ok(t ~= last, "no repeat")
+                last = t
+            end
+            S.ns.db.streak[kind] = 1
+            eq(S.ns.Nag(kind), nil, kind .. ": one is not a run")
+        end
+    end)
+
     test("/health test winds the clocks so the next flight brings both breaks", function()
         local S = T.Login()
         S.Slash("/health", "test")
@@ -780,6 +836,26 @@ return function(T)
         ok(not BedShown(S), "quiet after midnight")
         S.Advance(22 * 3600) -- next evening, 22:31
         ok(BedShown(S), "back the next evening")
+    end)
+
+    test("Not tonight two nights running: the third night's card pushes back", function()
+        local S = T.Login({ epoch = At(22, 59) }, BED_ON)
+        S.Advance(2 * MIN)
+        ok(not Bed(S).nag:IsShown(), "first night: plain")
+        Click(Bed(S).tonight)
+        S.Advance(23 * 3600 + 30 * MIN) -- next night, 23:01
+        ok(BedShown(S))
+        ok(not Bed(S).nag:IsShown(), "one night is not a run")
+        Click(Bed(S).tonight)
+        S.Advance(24 * 3600) -- third night
+        ok(BedShown(S))
+        contains({ Bed(S).nag:GetText() }, '^"Not tonight" 2 nights running%. ')
+        -- this night it was only OK'd: the run ends
+        Click(Bed(S).ok)
+        S.Advance(24 * 3600)
+        ok(BedShown(S))
+        ok(not Bed(S).nag:IsShown(), "a night not turned down ends the run")
+        eq(S.ns.db.streak.bed, 0)
     end)
 
     test("bedtime waits for a fight to end", function()

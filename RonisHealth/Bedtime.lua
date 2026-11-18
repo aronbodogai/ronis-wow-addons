@@ -52,12 +52,21 @@ end
 -- "Not tonight"
 function ns.DismissBedtime()
     ns.db.bedtime.dismissed = ns.NightID()
+    ns.db.streak.bed = (ns.db.streak.bed or 0) + 1
     ns.HideReminder("bed")
 end
 
 -- "OK" on a bedtime card: back in 10 minutes
 function ns.BedtimeOK(variant)
     if variant == "bed" or variant == "late" then nextBed = GetTime() + ns.BED_REPEAT end
+end
+
+-- The first bedtime card of a night: if the last night with a card was not
+-- turned down, the "Not tonight" run is over.
+local function NewCardNight(b, night)
+    if b.cardNight == night then return end
+    if b.cardNight and b.dismissed ~= b.cardNight then ns.db.streak.bed = 0 end
+    b.cardNight = night
 end
 
 -- Called every second by the core's clock.
@@ -83,6 +92,7 @@ function ns.WatchBedtime()
         if ns.InCombat() then return end
         if b.windShown ~= night then
             b.windShown = night
+            NewCardNight(b, night)
             ns.ShowBedtime(wasInside and "back" or "wind", now)
         elseif wasInside then
             ns.ShowBedtime("back", now)
@@ -95,6 +105,7 @@ function ns.WatchBedtime()
     wasInside = nil
     if ns.InCombat() or ns.Showing("bed") and ns.BedVariant() ~= "wind" and ns.BedVariant() ~= "back" then return end
     if GetTime() < nextBed then return end
+    NewCardNight(b, night)
     ns.ShowBedtime(nm - bed < 5 and "bed" or "late", now)
     nextBed = math.huge -- until the card is closed
 end

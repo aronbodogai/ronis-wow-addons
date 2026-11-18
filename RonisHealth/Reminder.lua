@@ -95,6 +95,12 @@ local function Layout(card)
         card.reason:Hide()
     end
     Put(card.title, 6)
+    if card.nag:GetText() and card.nag:GetText() ~= "" then
+        card.nag:Show()
+        Put(card.nag, 6)
+    else
+        card.nag:Hide()
+    end
     Put(card.action, 6)
     Put(card.why, 8)
     if card.expanded then
@@ -188,6 +194,9 @@ local function Shell(kind)
     card.reason:SetTextColor(0.31, 0.82, 0.55)
     card.reason:SetText("")
     card.title = Text(card, "GameFontNormalLarge")
+    card.nag = Text(card, "GameFontHighlight")
+    card.nag:SetTextColor(1, 0.55, 0.2)
+    card.nag:SetText("")
     card.action = Text(card, "GameFontHighlight")
     card.why = Text(card, "GameFontDisableSmall")
     card.more = Text(card, "GameFontHighlightSmall")
@@ -223,6 +232,7 @@ local function Fill(card)
     local ctx = card.ctx
     card.reason:SetText(ns.WhyNow(card.kind, ctx) or "")
     card.title:SetText(T.Title(ns.db, ctx))
+    card.nag:SetText(ns.Nag(card.kind) or "")
     card.action:SetText(T.Action(ns.db, ctx))
     card.why:SetText(T.why)
     card.more:SetText(T.More(ns.db) .. "\n\n" .. ns.TEXT.timing)
@@ -364,6 +374,7 @@ function ns.ShowBedtime(variant, minute)
     local T = ns.TEXT.bed[variant]
     card.variant = variant
     card.title:SetText(T.title:format(ns.TimeText(minute)))
+    card.nag:SetText(ns.Nag("bed") or "")
     card.action:SetText(T.action)
     card.why:SetText(T.why)
     card.more:SetText("")

@@ -38,6 +38,8 @@ flights. Without it, flight times are estimated from the route's length.
   for easy stuff like a crafting queue while you brush your teeth. If you
   are in a dungeon it waits until you come out. From 23:00 a bedtime card
   every 10 minutes, with **Not tonight** to stop it.
+- **Skip twice in a row** and the next card says so, with a short nudge.
+  Same for bedtime after two nights of **Not tonight**.
 - Snooze, skip, pause for an hour, and see how many breaks you took today.
 
 Commands

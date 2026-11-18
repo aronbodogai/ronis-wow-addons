@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Skipping adds up.** After two skips in a row, the next eye or squat card
+  gets an orange line under its title: how many you skipped, and one of a
+  dozen short nudges picked at random. Bedtime does the same after two
+  nights of **Not tonight** in a row. Doing a break (or a night without
+  **Not tonight**) ends the run; snoozing doesn't count as a skip.
 - **Bedtime is on by default**, also for anyone who had v0.4.0 (where it
   was off). Turn it off in the options or with `/health bed off`.
 - Options: the bedtime row reads "Bedtime from" so the label no longer runs

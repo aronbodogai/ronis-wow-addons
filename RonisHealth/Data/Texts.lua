@@ -216,6 +216,73 @@ ns.TEXT.timing = H("Why now?") .. "\n" .. "Cards come at natural pauses (flights
     .. "that happens anyway helps it become automatic (Gardner, Lally and Wardle, 2012)."
 
 ---------------------------------------------------------------------------
+-- After 2 or more skips in a row (or "Not tonight" 2 or more nights in a
+-- row) a card gets one of these, picked at random, under its title.
+---------------------------------------------------------------------------
+ns.NAG_FROM = 2
+ns.TEXT.nag = {
+    count = {
+        eye = "Skipped %d in a row.",
+        squat = "Skipped %d in a row.",
+        bed = "\"Not tonight\" %d nights running.",
+    },
+    eye = {
+        "The far wall misses you.",
+        "Twenty seconds. Nobody will notice.",
+        "Loot doesn't despawn in 20 seconds.",
+        "Look at something that isn't pixels.",
+        "Squinting is not a stat.",
+        "Even your character blinks more than you.",
+        "One look out the window. That's it.",
+        "Dry eyes don't fix themselves.",
+        "Focus far, then back to farming.",
+        "Your eyes asked nicely. Twice.",
+        "The screen will still be there.",
+        "Twenty seconds is less than a hearthstone cast.",
+    },
+    squat = {
+        "Your chair is winning.",
+        "You've done harder dailies than this.",
+        "Your legs want a turn.",
+        "Stand up. The mobs will wait.",
+        "Sitting is the one stat you've maxed.",
+        "One set, then back to it.",
+        "Your character ran miles today. You didn't.",
+        "Legs are gear too. Use them.",
+        "Nobody's watching. Do them anyway.",
+        "Half a minute of squats beats another skip.",
+        "Get up before the chair claims you.",
+        "Skipping leg day, in a game, again.",
+    },
+    bed = {
+        "Tomorrow-you is already tired.",
+        "One more dungeon is how it gets to 2 AM.",
+        "Your alarm doesn't care about your loot.",
+        "Log off on a win.",
+        "Sleep is the best buff in the game.",
+        "Queue the crafts. Go brush your teeth.",
+        "Nothing in here is worth a bad morning.",
+        "Your bed respawned. Go use it.",
+        "Another night of \"just one more\".",
+        "Set your hearthstone. Go to bed.",
+        "Rested XP works on you too.",
+        "The game will be here tomorrow.",
+    },
+}
+
+-- kind: "eye", "squat" or "bed". nil until the run is long enough.
+local lastNag = {}
+function ns.Nag(kind)
+    local n = ns.db.streak and ns.db.streak[kind] or 0
+    if n < ns.NAG_FROM then return nil end
+    local pool = ns.TEXT.nag[kind]
+    local i = math.random(#pool)
+    if i == lastNag[kind] then i = i % #pool + 1 end
+    lastNag[kind] = i
+    return ns.TEXT.nag.count[kind]:format(n) .. " " .. pool[i]
+end
+
+---------------------------------------------------------------------------
 -- Bedtime cards. %s is the time.
 ---------------------------------------------------------------------------
 local WIND_WHY = "Exciting games right before bed keep you alert and push sleep later. A calm half hour helps."
