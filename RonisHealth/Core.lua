@@ -316,16 +316,19 @@ function ns.Tick()
     -- bedtime goes by the time of day, so being AFK does not hold it back
     if not ns.Paused() then ns.WatchBedtime() end
 
-    -- AFK: stop the clocks; coming back after a while counts as an eye break
+    -- AFK: stop the clocks. The game flags you AFK after 5 minutes without
+    -- input, so your eyes had their rest: the eye timer starts over (an open
+    -- eye card goes away). Squats only pause.
     if ns.db.pauseAFK then
         if IsAFK() then
-            afkSince = afkSince or now
+            if not afkSince then
+                afkSince = now
+                ns.HideReminder("eye")
+                ns.Reset("eye")
+            end
             return
-        elseif afkSince then
-            local away = now - afkSince
-            afkSince = nil
-            if away >= ns.AWAY_RESET and not ns.Showing("eye") then ns.Reset("eye") end
         end
+        afkSince = nil
     end
     if ns.Paused() then return end
 

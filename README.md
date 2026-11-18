@@ -199,7 +199,8 @@ its own clock until you answer it.
 - **Eye breaks (20-20-20)**, every 20 minutes (10–60): look at something
   at least 6 m (20 ft) away for 20 seconds, then a few slow, full blinks.
   **Start 20 s** counts the break down on the card and counts it as done.
-  Coming back from 5+ minutes AFK restarts the eye timer.
+  Going AFK (the game's flag, after 5 minutes without input) restarts the
+  eye timer and closes an open eye card; squat timers only pause.
 - **Squat breaks**, every 40 minutes (20–90): a level sets the move and reps
   (Gentle: 5 chair stands; Standard: 10 squats; Strong: 15 squats; Athletic:
   20 slow squats); the move (calf raises, supported mini-squats, chair

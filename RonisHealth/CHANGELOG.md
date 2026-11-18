@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Going AFK restarts the eye timer right away (the game flags you AFK after
+  5 minutes without input, so your eyes had their rest) and closes an open
+  eye card. Squat timers still only pause.
 - Bedtime cards came only while you were not AFK; now they come on time even
   when the game has flagged you AFK. The options status says when the break
   clocks are stopped because you are AFK.
