@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Bedtime cards came only while you were not AFK; now they come on time even
+  when the game has flagged you AFK. The options status says when the break
+  clocks are stopped because you are AFK.
 - **Skipping adds up.** After two skips in a row, the next eye or squat card
   gets an orange line under its title: how many you skipped, and one of a
   dozen short nudges picked at random. Bedtime does the same after two

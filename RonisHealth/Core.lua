@@ -313,6 +313,9 @@ function ns.Tick()
         EndTrip()
     end
 
+    -- bedtime goes by the time of day, so being AFK does not hold it back
+    if not ns.Paused() then ns.WatchBedtime() end
+
     -- AFK: stop the clocks; coming back after a while counts as an eye break
     if ns.db.pauseAFK then
         if IsAFK() then
@@ -325,8 +328,6 @@ function ns.Tick()
         end
     end
     if ns.Paused() then return end
-
-    ns.WatchBedtime()
 
     if ns.pendingSummary and not ns.Blocker() then
         local trip = ns.pendingSummary
@@ -557,6 +558,9 @@ function ns.StatusLines()
     local out = {}
     if ns.Paused() then
         out[#out + 1] = "Paused for " .. ns.Clock(ns.pausedUntil - GetTime()) .. " more."
+    end
+    if ns.db.pauseAFK and IsAFK() then
+        out[#out + 1] = "You are AFK: break clocks are stopped until you are back."
     end
     local b = ns.db.bedtime
     if b.enabled then
