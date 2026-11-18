@@ -22,6 +22,10 @@ press Send yourself, so you always see the draft first.
 - Every draft gets a random message in the mail body, from a pirate, a
   grumpy dwarf, a secret agent and more.
 
+**One minimap button for all Roni's addons:** click it for a window with a
+tab per addon you have installed. The MailMats tab has the groups,
+character list, greens, message and cash on delivery settings.
+
 Commands
 --------
 

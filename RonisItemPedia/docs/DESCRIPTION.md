@@ -55,6 +55,10 @@ Commands
 Good to know
 ------------
 
+**One minimap button for all Roni's addons:** click it for a window with a
+tab per addon you have installed. The ItemPedia tab opens the window and
+resets its position.
+
 Mob drops, vendors, spawn locations and quests come from **Questie**. With
 Questie installed you get the full ItemPedia; without it you still get every
 recipe, the item's properties and its tooltip. Auctionator prices show up when

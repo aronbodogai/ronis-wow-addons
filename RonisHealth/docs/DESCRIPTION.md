@@ -41,6 +41,8 @@ flights. Without it, flight times are estimated from the route's length.
 - **Skip twice in a row** and the next card says so, with a short nudge.
   Same for bedtime after two nights of **Not tonight**.
 - Snooze, skip, pause for an hour, and see how many breaks you took today.
+- One minimap button for all Roni's addons: the Health tab has every
+  option.
 
 Commands
 --------
