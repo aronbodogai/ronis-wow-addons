@@ -1,6 +1,6 @@
 # Roni's MailMats
 
-## Unreleased
+## v0.13.0
 
 - **One minimap button for all Roni's addons.** Click it for a window with a
   tab per addon. Tabs of Roni's addons you don't have are greyed out;

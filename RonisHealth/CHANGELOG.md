@@ -1,6 +1,6 @@
 # Roni's Health
 
-## Unreleased
+## v0.4.0
 
 - **One minimap button for all Roni's addons.** Click it for a window with a
   tab per addon. Tabs of Roni's addons you don't have are greyed out;
