@@ -111,6 +111,26 @@ for id, profs in pairs(ns.CRATES or {}) do
     end
 end
 
+-- Spell reagents (Data/ClassReagents.lua): a shaman's Ankh and Fish Oil, a
+-- mage's Arcane Powder. One group per class, "<Class> reagents"; the panel
+-- offers it to each alt of that class.
+ns.CLASS_GROUP, ns.CLASS_ORDER = {}, {}
+local CLASS_NAMES = {
+    DRUID = "Druid", MAGE = "Mage", PALADIN = "Paladin", PRIEST = "Priest", ROGUE = "Rogue",
+    SHAMAN = "Shaman", WARLOCK = "Warlock", HUNTER = "Hunter", WARRIOR = "Warrior",
+}
+for _, token in ipairs({ "DRUID", "HUNTER", "MAGE", "PALADIN", "PRIEST", "ROGUE", "SHAMAN", "WARLOCK", "WARRIOR" }) do
+    local list = (ns.CLASS_REAGENTS or {})[token]
+    if list then
+        local name = CLASS_NAMES[token] .. " reagents"
+        local set = {}
+        for _, id in ipairs(list) do set[id] = true end
+        ns.BASE_GROUP[name] = set
+        ns.CLASS_GROUP[token] = name
+        ns.CLASS_ORDER[#ns.CLASS_ORDER + 1] = name
+    end
+end
+
 -- Bind-on-equip green weapons and armor belong to Enchanting (to be
 -- disenchanted). Decided from the item's own data, so it is not a list.
 function ns.IsDisenchantable(id)
@@ -166,6 +186,7 @@ local WHAT = { Lockpicking = "lockboxes", Comprehension = "scrolls", Upgrades = 
 local function WhatOne(p)
     if WHAT[p] then return WHAT[p] end
     if ns.IsCustomGroup and ns.IsCustomGroup(p) then return p end
+    if p:find(" reagents$") then return p end
     return p .. " mats"
 end
 function ns.What(prof)
@@ -281,6 +302,7 @@ end
 function ns.Categories()
     local list = {}
     for _, p in ipairs(ns.CRAFT_ORDER) do list[#list + 1] = p end
+    for _, p in ipairs(ns.CLASS_ORDER) do list[#list + 1] = p end
     local custom = {}
     for name in pairs(ns.db and ns.db.groups.custom or {}) do custom[#custom + 1] = name end
     table.sort(custom)
@@ -577,6 +599,9 @@ end
 
 function ns.HoldReason(id)
     if ns.db.ignore[id] then return "ignored" end
+    local me = ns.MyChar()
+    local own = me and ns.CLASS_GROUP[me.class or ""]
+    if own and ns.InGroup(own, id) then return "for your own spells" end
     if ns.db.keepOwn then
         for _, p in ipairs(ns.MyCraftProfs()) do
             if ns.KeepsFor(p) and ns.InGroup(p, id) then

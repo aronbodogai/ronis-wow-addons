@@ -894,6 +894,30 @@ return function(T)
         contains({ S.env.RonisMailMatsGroups.title:GetText() }, "Tailoring recipe", "groups window explains it")
     end)
 
+    test("spell reagents go to alts of that class", function()
+        local saved = T.Logout(T.Login({ name = "Shammy", class = "SHAMAN" }))
+        saved = T.Logout(T.Login({ name = "Wiz", class = "MAGE" }, saved))
+        local S = MainAtMailbox(saved, { class = "PRIEST", bags = Bags({ { 17030, 5 }, { 17058, 2 }, { 17020, 20 } }) })
+        local function text(alt)
+            for _, b in ipairs(T.Buttons(S)) do
+                if b.alt == alt and b.prof:find("reagents") then return b:GetText() end
+            end
+        end
+        eq(text("Shammy"), "Send Shaman reagents (2)", "ankh and fish oil")
+        eq(text("Wiz"), "Send Mage reagents (1)", "arcane powder")
+        contains(S.ns.Categories(), "Shaman reagents", "other recipients can ask for them")
+    end)
+
+    test("your own class's reagents stay with you", function()
+        local saved = T.Logout(T.Login({ name = "Wiz", class = "MAGE" }))
+        local S = MainAtMailbox(saved, { class = "MAGE", bags = Bags({ { 17020, 20 } }) })
+        local found
+        for _, b in ipairs(T.Buttons(S)) do if b.alt == "Wiz" and b.prof == "Mage reagents" then found = b end end
+        eq(found, nil, "no button: the powder is kept")
+        local held = S.ns.HeldFor("Mage reagents")
+        eq(held[1] and held[1][3], "for your own spells", "and the tooltip says why")
+    end)
+
     test("a green that upgrades an alt is not offered for disenchanting", function()
         local saved = T.Logout(T.Login({ name = "Dusty", class = "PRIEST", profs = { ENCH } }))
         saved = T.Logout(T.Login({ name = "Wiz", class = "MAGE", level = 20, equipped = { [1] = 9002 } }, saved))

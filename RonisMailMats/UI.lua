@@ -149,6 +149,8 @@ function ns.Refresh()
         end
         -- gear upgrades: only when there are some, so the panel stays short
         if #ns.StacksFor(ns.UPGRADES, alt) > 0 then crafts[#crafts + 1] = ns.UPGRADES end
+        local spells = ns.CLASS_GROUP[c.class or ""]
+        if spells and #ns.StacksFor(spells, alt) > 0 then crafts[#crafts + 1] = spells end
         if #crafts > 0 then
             nh = nh + 1
             local h = GetHeader(nh)

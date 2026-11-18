@@ -5,6 +5,10 @@
 - **Recipes go to the profession that learns them.** Patterns, plans,
   schematics, formulas and recipes in your bags count toward that
   profession's Send button, so a Tailoring pattern goes to your tailor.
+- **Spell reagents go to alts of that class.** Ankhs, Fish Oil and Shiny
+  Fish Scales go to your shaman, Arcane Powder and runes to your mage,
+  candles to your priest, and so on. The button only shows when you carry
+  some. Reagents your own class uses stay in your bags.
 
 ## v0.13.0
 

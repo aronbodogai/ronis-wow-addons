@@ -50,7 +50,8 @@ local ITEMS = {
     [9013] = { "Next Level Hood", 2, 30, 22, "INVTYPE_HEAD", 4, 1, 2 },
     [9011] = { "Bound Green Sword", 2, 20, 15, "INVTYPE_WEAPON", 2, 7, 1 },
     [9012] = { "White Sword", 1, 20, 15, "INVTYPE_WEAPON", 2, 7, 2 },
-    [9020] = { "Pattern: Hands of Darkness", 2, 24, 0, "", 9, 2, 0 },
+    [17030] = { "Ankh", 1 }, [17058] = { "Fish Oil", 1 }, [17020] = { "Arcane Powder", 1 },
+    [9020] ={ "Pattern: Hands of Darkness", 2, 24, 0, "", 9, 2, 0 },
     [9021] = { "Plans: Copper Chain Belt", 1, 7, 0, "", 9, 4, 0 },
     [248705] = { "Waylaid Crate: Journeyman Fabrics", 1 }, [248682] = { "Waylaid Crate: Apprentice Herbs", 1 },
 }
