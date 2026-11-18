@@ -55,7 +55,8 @@ local function Slot_OnClick(self, button)
     if not self.link then return end
     if IsModifiedClick("CHATLINK") then
         local _, full = ns.GetItemInfo(self.link)
-        if full then ChatEdit_InsertLink(full) end
+        local insert = (ChatFrameUtil and ChatFrameUtil.InsertLink) or ChatEdit_InsertLink
+        if full and insert then insert(full) end
     elseif button == "LeftButton" and self.navigable then
         ns.Open(self.link)
     end
@@ -611,6 +612,14 @@ local BIND = {
     [4] = ITEM_BIND_QUEST or "Quest Item",
 }
 
+-- Forever has the modern C_CurrencyInfo.GetCoinTextureString; the global
+-- GetCoinTextureString from Classic does not exist there.
+local function CoinText(copper)
+    local f = (C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString) or GetMoneyString
+    if f then return f(copper) end
+    return ("%dg %ds %dc"):format(math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100)
+end
+
 local function AuctionPrice(link)
     local api = Auctionator and Auctionator.API and Auctionator.API.v1
     if not (api and api.GetAuctionPriceByItemLink) then return nil end
@@ -635,9 +644,9 @@ function UI:SectionProperties(link, id, info, y)
     if req and req > 0 then row("Requires level", req) end
     if stack then row("Stack size", stack) end
     if bind and BIND[bind] then row("Binding", BIND[bind]) end
-    row("Vendor price", (sell and sell > 0) and GetCoinTextureString(sell) or "Cannot be sold to vendors")
+    row("Vendor price", (sell and sell > 0) and CoinText(sell) or "Cannot be sold to vendors")
     local ah = AuctionPrice(link)
-    if ah then row("Auction (Auctionator)", GetCoinTextureString(ah)) end
+    if ah then row("Auction (Auctionator)", CoinText(ah)) end
     local bags, total = ns.GetItemCount(id) or 0, ns.GetItemCount(id, true) or 0
     row("You own", total > bags and (bags .. " in bags, " .. total .. " incl. bank") or bags)
     row("Item ID", id, 0.6, 0.6, 0.6)
