@@ -287,6 +287,10 @@ replaces the functions, and the window and button are built at login.
   (checks and steppers re-read their value whenever the page is shown).
 - To change it: edit `RonisHealth/RonisHub.lua`, raise `VERSION`, copy it
   to the other addon folders.
+- `.github/scripts/check-hub.sh` (the Lint workflow, every push and pull
+  request) fails when a copy differs, a .toc does not load it, or it
+  changed without a higher `VERSION`. Locally:
+  `bash .github/scripts/check-hub.sh origin/main`.
 
 ## Guides site
 

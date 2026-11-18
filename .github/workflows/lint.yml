@@ -1,0 +1,34 @@
+name: Lint
+
+# Fast checks that need no game or test setup. Runs on every push and pull
+# request.
+#
+# check-hub.sh: the shared RonisHub.lua is in every addon, identical, loaded
+# by every .toc, and its VERSION goes up whenever it changes. Run it locally
+# with: bash .github/scripts/check-hub.sh origin/main
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Shared RonisHub.lua
+        env:
+          # the commit before this push, or the pull request's base
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          case "$BASE" in
+            ''|0000000000000000000000000000000000000000) BASE= ;;
+          esac
+          bash .github/scripts/check-hub.sh $BASE
