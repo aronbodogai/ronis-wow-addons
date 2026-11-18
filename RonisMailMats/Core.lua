@@ -120,6 +120,20 @@ function ns.IsDisenchantable(id)
         and equipLoc ~= nil and equipLoc ~= ""
 end
 
+-- Recipes (patterns, plans, schematics, formulas) go to the profession that
+-- learns them, decided from the item's Recipe subclass.
+local RECIPE_CLASS = 9
+local RECIPE_PROF = {
+    [1] = "Leatherworking", [2] = "Tailoring", [3] = "Engineering", [4] = "Blacksmithing",
+    [5] = "Cooking", [6] = "Alchemy", [7] = "First Aid", [8] = "Enchanting",
+}
+ns.HAS_RECIPES = {}
+for _, p in pairs(RECIPE_PROF) do ns.HAS_RECIPES[p] = true end
+function ns.RecipeProf(id)
+    local name, _, _, _, _, _, _, _, _, _, _, classID, subID = GetItemInfo(id)
+    if name and classID == RECIPE_CLASS then return RECIPE_PROF[subID] end
+end
+
 -- Whether an item belongs to a group (a name, or a list of names).
 function ns.InGroup(cat, id)
     if type(cat) == "table" then
@@ -130,6 +144,7 @@ function ns.InGroup(cat, id)
     end
     local set = ns.IS_REAGENT[cat]
     if set and set[id] then return true end
+    if ns.RecipeProf(id) == cat then return true end
     return cat == "Enchanting" and ns.IsDisenchantable(id)
 end
 ns.IS_REAGENT = {}

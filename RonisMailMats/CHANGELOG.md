@@ -1,5 +1,11 @@
 # Roni's MailMats
 
+## Unreleased
+
+- **Recipes go to the profession that learns them.** Patterns, plans,
+  schematics, formulas and recipes in your bags count toward that
+  profession's Send button, so a Tailoring pattern goes to your tailor.
+
 ## v0.13.0
 
 - **One minimap button for all Roni's addons.** Click it for a window with a

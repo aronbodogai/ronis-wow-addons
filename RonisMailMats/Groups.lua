@@ -82,6 +82,7 @@ function ns.RefreshGroups()
     if page > pages then page = pages end
     local kind = ns.IsCustomGroup(selected) and "your group" or (ns.GroupEdited(selected) and "edited" or "built-in")
     local extra = (selected == "Enchanting" and not ns.db.noGreens) and "\n|cff1eff00+ every BoE green weapon and armor piece|r" or ""
+    if ns.HAS_RECIPES[selected] then extra = extra .. "\n|cff1eff00+ every " .. selected .. " recipe|r" end
     win.title:SetText(("%s |cff999999(%d items, %s)|r%s"):format(selected, #ids, kind, extra))
     for i = 1, ROWS do
         local r = rows[i]
