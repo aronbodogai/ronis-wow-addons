@@ -1,5 +1,12 @@
 # Roni's Health
 
+## Unreleased
+
+- **Bedtime is on by default**, also for anyone who had v0.4.0 (where it
+  was off). Turn it off in the options or with `/health bed off`.
+- Options: the bedtime row reads "Bedtime from" so the label no longer runs
+  under the time buttons.
+
 ## v0.4.0
 
 - **One minimap button for all Roni's addons.** Click it for a window with a

@@ -29,7 +29,7 @@ local DEFAULTS = {
         progress = true, -- the squat range grows a little each week you keep up
     },
     -- bedtime: wind-down card (no new dungeon), then bedtime every 10 min
-    bedtime = { enabled = false, windDown = 22 * 60 + 30, bed = 23 * 60 },
+    bedtime = { enabled = true, windDown = 22 * 60 + 30, bed = 23 * 60 },
     -- weekly squat progression: step 0 = the reps you picked
     prog = { step = 0, done = 0, skipped = 0 },
 }
@@ -443,6 +443,11 @@ local function Init()
     end
     if ns.SinceNoon(db.bedtime.bed) <= ns.SinceNoon(db.bedtime.windDown) then
         db.bedtime.bed = (db.bedtime.windDown + 15) % 1440
+    end
+    -- v0.4.0 saved bedtime as off (its default then): turn it on once
+    if not db.bedtimeDefaultOn then
+        db.bedtime.enabled = true
+        db.bedtimeDefaultOn = true
     end
     db.prog.step = math.max(0, math.floor(tonumber(db.prog.step) or 0))
     Stats()

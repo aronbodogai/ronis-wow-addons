@@ -186,7 +186,7 @@ local function Build(page)
     local windLabel = Label(win, "GameFontHighlight", "No new dungeons from")
     windLabel:SetPoint("TOPLEFT", win, "TOPLEFT", PAD, -y - 4)
     Row(TimeStepper("windDown"), PAD + 160, 22, 4)
-    local bedLabel = Label(win, "GameFontHighlight", "Bedtime, then every 10 min")
+    local bedLabel = Label(win, "GameFontHighlight", "Bedtime from")
     bedLabel:SetPoint("TOPLEFT", win, "TOPLEFT", PAD, -y - 4)
     Row(TimeStepper("bed"), PAD + 160, 22, 10)
 

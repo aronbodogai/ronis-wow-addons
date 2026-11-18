@@ -239,7 +239,7 @@ its own clock until you answer it.
     more counts as a natural pause. With ~15 s to
     stand up and the move's pace (2-5 s/rep), a flight with room for two
     full sets and 30 s rest gets 2 x top; otherwise one set.
-- **Bedtime** (`Bedtime.lua`, off by default; `/health bed on|off`):
+- **Bedtime** (`Bedtime.lua`, on by default; `/health bed on|off`):
   at the wind-down time (22:30) one card: no new dungeon, queue crafting,
   brush teeth / shower. In a dungeon or raid it waits until you leave, and
   coming out of another one before bedtime shows it again. From bedtime

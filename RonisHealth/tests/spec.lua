@@ -709,10 +709,20 @@ return function(T)
     local function Bed(S) return T.Card(S, "bed") end
     local function BedShown(S) return T.Shown(S, "bed") end
 
-    test("bedtime is off unless turned on", function()
+    test("bedtime is on by default", function()
         local S = T.Login({ epoch = At(22, 29) })
-        S.Advance(5 * MIN)
-        ok(not BedShown(S), "no card")
+        ok(S.ns.db.bedtime.enabled, "on for a new install")
+        S.Advance(2 * MIN)
+        ok(BedShown(S), "wind-down card")
+    end)
+
+    test("v0.4.0 saved bedtime off: turned on once, then your choice sticks", function()
+        local old = { RonisHealthDB = { bedtime = { enabled = false } } }
+        local S = T.Login({ epoch = At(12, 0) }, old)
+        ok(S.ns.db.bedtime.enabled, "turned on once")
+        S.Slash("/health", "bed off")
+        local S2 = T.Login({ epoch = At(12, 0) }, T.Logout(S))
+        ok(not S2.ns.db.bedtime.enabled, "off stays off after a reload")
     end)
 
     test("22:30 says no new dungeon, 23:00 says bedtime, then every 10 minutes", function()
@@ -804,6 +814,8 @@ return function(T)
             if f._type == "CheckButton" and f.Text and tostring(f.Text:GetText()):find("wind down") then check = f end
         end
         ok(check, "bedtime checkbox")
+        Click(check)
+        ok(not S.ns.db.bedtime.enabled, "off")
         Click(check)
         ok(S.ns.db.bedtime.enabled, "on")
         local found
