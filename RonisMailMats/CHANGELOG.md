@@ -1,6 +1,6 @@
 # Roni's MailMats
 
-## Unreleased
+## v0.14.0
 
 - **Recipes go to the profession that learns them.** Patterns, plans,
   schematics, formulas and recipes in your bags count toward that
