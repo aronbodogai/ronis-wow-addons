@@ -1,5 +1,14 @@
 # Roni's MailMats
 
+## Unreleased
+
+- **Mail history.** Every item you send, or take from the mailbox, is
+  logged. `/mailmats history` or **Mail history** on the MailMats tab opens
+  a dashboard of what went to other players (or came from them), per item
+  and per person, for the last day, 7 days, 30 days, 6 months, year and all
+  time. Your alts are left out unless you tick **Include my alts**. Counting
+  starts with this version.
+
 ## v0.14.0
 
 - **Recipes go to the profession that learns them.** Patterns, plans,

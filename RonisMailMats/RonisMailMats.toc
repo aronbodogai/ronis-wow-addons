@@ -18,6 +18,7 @@ Data\Crates.lua
 Data\ClassReagents.lua
 Core.lua
 Gear.lua
+History.lua
 Social.lua
 Groups.lua
 UI.lua

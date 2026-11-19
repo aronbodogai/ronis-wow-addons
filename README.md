@@ -126,6 +126,12 @@ Mails reagents to the alt who can use them.
     75% / 100% / 150% / 200% (left-click up, right-click down), or use
     `/mailmats cod <percent>` / `/mailmats cod off`. Other items in the
     same mail are not charged.
+- **Mail history:** every item you send, or take from the mailbox, is
+  logged (who, what, how many, when). `/mailmats history` or **Mail
+  history** on the MailMats tab opens a dashboard of what went to (or came
+  from) other players: per item and per person, for the last day, 7 days,
+  30 days, 6 months, year and all time. Your own characters are left out
+  unless you tick **Include my alts**.
 - **Random subjects:** every draft gets a random subject for what it
   holds (12 per profession, skill, upgrades, class reagents and mixed
   mails), from `Data/Subjects.lua`.

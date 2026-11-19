@@ -557,7 +557,15 @@ function mock.NewSession(opts)
         SetAttach(i, c)
         S.cursor = nil
     end
-    env.SendMail = function(to, subject, body) S.sent[#S.sent + 1] = { to = to, subject = subject } end
+    env.GetSendMailItem = function(i)
+        local a = S.attach[i]
+        if a then return ITEMS[a.item.id] and ITEMS[a.item.id][1], a.item.id, 134400, a.item.count or 1, 1, true end
+    end
+    -- the server confirms a little later; S.mailFails makes it refuse instead
+    env.SendMail = function(to, subject, body)
+        S.sent[#S.sent + 1] = { to = to, subject = subject }
+        env.C_Timer.After(0.1, function() S.Fire(S.mailFails and "MAIL_FAILED" or "MAIL_SEND_SUCCESS") end)
+    end
 
     -- Mail frame tree (subset of Blizzard_MailFrame)
     env.MailFrame = env.CreateFrame("Frame", "MailFrame", env.UIParent)
@@ -642,6 +650,13 @@ function mock.NewSession(opts)
         if not mail then return nil end
         return nil, nil, mail[1], "subject", 0, 0, 30, false, true, false, false, false, mail[2] or false
     end
+    -- mail[3]: attachments { {id, count}, ... }
+    env.GetInboxItem = function(i, a)
+        local it = inbox[i] and inbox[i][3] and inbox[i][3][a]
+        if it then return ITEMS[it[1]] and ITEMS[it[1]][1], it[1], 134400, it[2], 1, true end
+    end
+    env.TakeInboxItem = function(i, a) S.taken = (S.taken or 0) + 1 end
+    env.AutoLootMailItem = function(i) S.taken = (S.taken or 0) + 1 end
 
     -------------------------------------------------------------------------
     -- Saved variables, addon loading, login

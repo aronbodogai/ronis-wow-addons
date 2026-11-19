@@ -850,6 +850,72 @@ return function(T)
         eq(Body(S), "my own words", "drafting again keeps it too")
     end)
 
+    -----------------------------------------------------------------------
+    -- Mail history
+    -----------------------------------------------------------------------
+    test("sent mail is logged once the server confirms it", function()
+        local S = MainAtMailbox(TailorAltSaved())
+        S.Slash("/mailmats", "target Bob Smith: tailoring")
+        T.Button(S, "Send all to Bob Smith"):Click()
+        S.Advance(1)
+        local attached = S.Attachments()
+        ok(#attached > 0, "something attached")
+        S.mailFails = true
+        S.env.SendMail("Bob Smith", "x", "")
+        S.Advance(1)
+        eq(#(S.ns.db.log or {}), 0, "a failed send is not logged")
+        S.mailFails = false
+        S.env.SendMail("Bob Smith", "x", "")
+        S.Advance(1)
+        eq(#S.ns.db.log, #attached, "one entry per attachment")
+        eq(S.ns.db.log[1].who, "Bob Smith", "recipient")
+        eq(S.ns.db.log[1].d, "s", "sent")
+    end)
+
+    test("taking attachments logs them with the sender", function()
+        local S = MainAtMailbox(TailorAltSaved(), { inbox = { { "Pen Pal", false, { { 2589, 20 }, { 2592, 5 } } } } })
+        S.env.TakeInboxItem(1, 2)
+        eq(#S.ns.db.log, 1, "one item taken")
+        eq(S.ns.db.log[1].id, 2592, "the second attachment")
+        S.env.AutoLootMailItem(1)
+        eq(#S.ns.db.log, 3, "auto loot takes all")
+        eq(S.ns.db.log[3].who, "Pen Pal", "sender")
+        eq(S.ns.db.log[3].d, "r", "received")
+    end)
+
+    test("the history sums items per timeframe and leaves out your alts", function()
+        local S = MainAtMailbox(TailorAltSaved())
+        local now, day = S.env.time(), 86400
+        local R = S.ns.RecordMail
+        R("s", "Bob Smith", 2589, 20, now - 3600)        -- today
+        R("s", "Bob Smith", 2589, 10, now - 3 * day)     -- this week
+        R("s", "Ann Lee", 2589, 5, now - 20 * day)       -- this month
+        R("s", "Ann Lee", 2592, 7, now - 100 * day)      -- half a year
+        R("s", "Bob Smith", 2592, 1, now - 300 * day)    -- this year
+        R("s", "Bob Smith", 2592, 2, now - 800 * day)    -- long ago
+        R("s", "Alt", 2589, 99, now - 3600)              -- an alt
+        R("r", "Ann Lee", 4306, 4, now - 3600)           -- received
+        local items, total, people = S.ns.HistorySummary("s", nil, false, now)
+        eq(table.concat(total, ","), "20,30,35,42,43,45", "totals per timeframe")
+        eq(items[1].id, 2589, "most sent first")
+        eq(table.concat(items[1].counts, ","), "20,30,35,35,35,35", "linen per timeframe")
+        eq(#people, 2, "Bob and Ann, not the alt")
+        eq(people[1][1], "Bob Smith", "Bob sent the most")
+        local _, bob = S.ns.HistorySummary("s", "Bob Smith", false, now)
+        eq(bob[6], 33, "all time for Bob")
+        local _, withAlts = S.ns.HistorySummary("s", nil, true, now)
+        eq(withAlts[1], 119, "alts included on request")
+        local _, recv = S.ns.HistorySummary("r", nil, false, now)
+        eq(recv[6], 4, "received kept apart")
+
+        S.Slash("/mailmats", "history")
+        local win = S.env.RonisMailMatsHistory
+        ok(win and win:IsShown(), "dashboard opens")
+        contains({ win.title:GetText() }, "sent to other players", "title")
+        S.Slash("/mailmats", "history received")
+        contains({ win.title:GetText() }, "received from", "received tab")
+    end)
+
     test("subjects are picked at random for the kind of mail", function()
         local S = MainAtMailbox(TailorAltSaved())
         local seen = {}

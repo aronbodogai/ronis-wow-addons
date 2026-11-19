@@ -883,6 +883,7 @@ ev:SetScript("OnEvent", function(_, event)
         if ns.InitGear then ns.InitGear() end
         if ns.InitSocial then ns.InitSocial() end
         if ns.InitMinimap then ns.InitMinimap() end
+        if ns.InitHistory then ns.InitHistory() end
         if ns.InitUI then ns.InitUI() end
     elseif ns.db then
         ns.ScanSkills(false)
@@ -999,6 +1000,8 @@ SlashCmdList.RONISMAILMATS = function(msg)
     elseif cmd == "minimap" then
         ns.SetMinimapShown(not RonisHub:ButtonShown())
         ns.Print(RonisHub:ButtonShown() and "Minimap button shown." or "Minimap button hidden. /mailmats minimap shows it again.")
+    elseif cmd == "history" or cmd == "log" then
+        ns.ToggleHistory(arg == "received" and "r" or (arg == "sent" and "s" or nil))
     elseif cmd == "options" or cmd == "config" then
         RonisHub:Toggle("mailmats")
     elseif cmd == "scan" then
@@ -1025,7 +1028,7 @@ SlashCmdList.RONISMAILMATS = function(msg)
         end
         ns.Print("/mailmats scan | selftest | forget <name> | ignore <item> | unignore <item> | ignored")
         ns.Print("/mailmats target <first last>: <category>, ... | untarget <first last> | targets")
-        ns.Print("/mailmats options | groups [group] | minimap | ahead <levels> | cod <percent>|off | greens on|off | message on|off")
+        ns.Print("/mailmats options | groups [group] | history [sent|received] | minimap | ahead <levels> | cod <percent>|off | greens on|off | message on|off")
     end
 end
 

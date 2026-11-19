@@ -341,6 +341,8 @@ function ns.BuildHubPage(page)
     groups:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -y)
     local chars = H:Button(page, "List my characters", 140, function() SlashCmdList.RONISMAILMATS("") end)
     chars:SetPoint("LEFT", groups, "RIGHT", 6, 0)
+    local history = H:Button(page, "Mail history", 110, function() ns.ToggleHistory() end)
+    history:SetPoint("LEFT", chars, "RIGHT", 6, 0)
     y = y + 34
 
     Row(H:Check(page, page, "Send BoE green gear to enchanters", function() return not ns.db.noGreens end,
