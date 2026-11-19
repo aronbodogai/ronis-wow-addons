@@ -26,6 +26,16 @@ return function(T)
     end
     local MAIN_BAGS = { { 2589, 20 }, { 2589, 5 }, { 2592, 10 }, { 6948, 1 }, { 765, 7 } }
 
+    -- the draft subject is one of the random subjects for that kind of mail
+    local function SubjectFrom(S, key, what)
+        local subj = S.env.SendMailSubjectEditBox:GetText()
+        for _, x in ipairs(S.ns.SUBJECTS[key]) do
+            local filled = x:gsub("{what}", what or ""):gsub("^%l", string.upper)
+            if filled == subj then return end
+        end
+        error(("subject %q is not a %s subject"):format(subj, key), 2)
+    end
+
     local function MainAtMailbox(saved, opts)
         opts = opts or {}
         opts.name = opts.name or "Main"
@@ -140,7 +150,7 @@ return function(T)
         S.Advance(1)
         ok(S.env.SendMailFrame:IsShown(), "send tab shown")
         eq(S.env.SendMailNameEditBox:GetText(), "Alt", "recipient")
-        eq(S.env.SendMailSubjectEditBox:GetText(), "Tailoring mats", "subject")
+        SubjectFrom(S, "Tailoring")
         local a = S.Attachments()
         eq(#a, 3, "attachments")
         local ids = {}
@@ -277,7 +287,7 @@ return function(T)
         table.sort(ids)
         eq(table.concat(ids, ","), "4632,4636,16882", "attached")
         eq(S.env.SendMailNameEditBox:GetText(), "Sneaky", "recipient")
-        eq(S.env.SendMailSubjectEditBox:GetText(), "Lockboxes", "subject")
+        SubjectFrom(S, "Lockpicking")
         eq(#S.sent, 0, "nothing sent")
     end)
 
@@ -371,7 +381,7 @@ return function(T)
         for _, a in ipairs(S.Attachments()) do ids[#ids + 1] = a.id end
         table.sort(ids)
         eq(table.concat(ids, ","), "9001,9006,9009", "attached")
-        eq(S.env.SendMailSubjectEditBox:GetText(), "Upgrades", "subject")
+        SubjectFrom(S, "Upgrades")
         eq(#S.sent, 0, "nothing sent")
     end)
 
@@ -421,7 +431,7 @@ return function(T)
         table.sort(ids)
         eq(table.concat(ids, ","), "2589,211780,213543", "attached")
         eq(S.env.SendMailNameEditBox:GetText(), "Bob", "recipient")
-        eq(S.env.SendMailSubjectEditBox:GetText(), "Tailoring mats, scrolls", "subject")
+        SubjectFrom(S, "default", "Tailoring mats, scrolls")
         eq(#S.sent, 0, "nothing sent")
     end)
 
@@ -805,6 +815,7 @@ return function(T)
     test("drafts get a random message with the name and what filled in", function()
         local S = MainAtMailbox(nil, { bags = Bags(LOCKBOX_BAGS) })
         eq(#S.ns.MESSAGES, 100, "100 messages")
+        S.Slash("/mailmats", "message on")
         S.Slash("/mailmats", "target Bob Smith: tailoring, scrolls")
         T.Button(S, "Send all to Bob Smith"):Click()
         S.Advance(1)
@@ -816,6 +827,7 @@ return function(T)
 
     test("New message rotates to a different one and never replaces typed text", function()
         local S = MainAtMailbox(TailorAltSaved())
+        S.Slash("/mailmats", "message on")
         T.Button(S, "Tailoring"):Click()
         S.Advance(1)
         local seen, last = {}, Body(S)
@@ -838,9 +850,39 @@ return function(T)
         eq(Body(S), "my own words", "drafting again keeps it too")
     end)
 
-    test("/mailmats message off leaves the body empty", function()
+    test("subjects are picked at random for the kind of mail", function()
         local S = MainAtMailbox(TailorAltSaved())
+        local seen = {}
+        T.Button(S, "Tailoring"):Click()
+        S.Advance(1)
+        SubjectFrom(S, "Tailoring")
+        for _ = 1, 20 do
+            local subj = S.ns.RandomSubject("Tailoring", "Tailoring mats")
+            local known = false
+            for _, x in ipairs(S.ns.SUBJECTS.Tailoring) do if x == subj then known = true end end
+            ok(known, "a Tailoring subject: " .. subj)
+            seen[subj] = true
+        end
+        local n = 0
+        for _ in pairs(seen) do n = n + 1 end
+        ok(n > 3, "several different subjects: " .. n)
+        for key, list in pairs(S.ns.SUBJECTS) do
+            ok(#list >= 10 and #list <= 15, key .. " has 10-15 subjects")
+            for _, x in ipairs(list) do ok(#x <= 40, "short subject: " .. x) end
+        end
+        eq(S.ns.RandomSubject("Shaman reagents", "Shaman reagents"):find("[{}]"), nil, "class filled in")
+        eq(S.ns.RandomSubject({ "Tailoring", "Mining" }, "x"):find("[{}]"), nil, "mixed mails use the default list")
+    end)
+
+    test("drafts have no message by default; /mailmats message off turns it off again", function()
+        local S = MainAtMailbox(TailorAltSaved())
+        T.Button(S, "Tailoring"):Click()
+        S.Advance(1)
+        eq(Body(S), "", "off by default")
+        S.Slash("/mailmats", "message on")
+        contains(S.printLog, "delete it by hand", "turning it on explains the full mailbox")
         S.Slash("/mailmats", "message off")
+        S.env.SendMailBodyEditBox:SetText("")
         T.Button(S, "Tailoring"):Click()
         S.Advance(1)
         eq(Body(S), "", "no message")

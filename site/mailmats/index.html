@@ -110,10 +110,12 @@
   </ul>
 
   <h2 id="messages">Mail messages</h2>
-  <p>Every draft gets a short message in the mail body, picked from 100 in 20 tones (pirate, grumpy
+  <p>Every draft gets a random subject for what it holds. Messages in the mail body are off by
+  default; <code>/mailmats message on</code> or the checkbox on the MailMats tab adds one, picked from 100 in 20 tones (pirate, grumpy
   dwarf, secret agent, cozy grandma, corporate memo...), with the recipient's name and what is sent
   filled in. <strong>New message</strong> rolls another one. Anything you typed yourself is never
-  replaced. <code>/mailmats message off</code> turns them off.</p>
+  replaced. A mail with a message stays in the inbox after you take the items, until you delete it
+  by hand, and a full inbox queues new mail.</p>
 
   <h2 id="commands">Commands</h2>
   <div class="table-scroll"><table>
@@ -128,7 +130,7 @@
     <tr><td><code>/mailmats targets</code></td><td>List recipients</td></tr>
     <tr><td><code>/mailmats cod 50</code></td><td>Cash on delivery for greens to other players, in % of vendor price (<code>off</code> to stop)</td></tr>
     <tr><td><code>/mailmats greens off</code></td><td>Stop sending BoE greens to your enchanter (<code>on</code> again)</td></tr>
-    <tr><td><code>/mailmats message off</code></td><td>No messages in the mail body</td></tr>
+    <tr><td><code>/mailmats message on|off</code></td><td>Random message in the mail body (off by default)</td></tr>
     <tr><td><code>/mailmats scan</code></td><td>Re-read this character's professions</td></tr>
   </table></div>
 

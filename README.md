@@ -126,11 +126,17 @@ Mails reagents to the alt who can use them.
     75% / 100% / 150% / 200% (left-click up, right-click down), or use
     `/mailmats cod <percent>` / `/mailmats cod off`. Other items in the
     same mail are not charged.
-- **Random messages:** every draft gets one of 100 messages in the mail
+- **Random subjects:** every draft gets a random subject for what it
+  holds (12 per profession, skill, upgrades, class reagents and mixed
+  mails), from `Data/Subjects.lua`.
+- **Random messages (off by default):** `/mailmats message on` or the
+  checkbox on the MailMats tab adds one of 100 messages to the mail
   body, in 20 tones (pirate, grumpy dwarf, secret agent, cozy grandma,
   corporate memo...), with the recipient's first name and what is sent
   filled in. **New message** on the panel rolls another one. Text you typed
-  yourself is never replaced. `/mailmats message off` stops it. The
+  yourself is never replaced. A mail with a message is not deleted when
+  you take its attachments, so it stays in the inbox until you delete it,
+  and a full inbox queues new mail. The
   messages were written by four Claude models (Haiku, Sonnet, Opus, Fable),
   25 each, and live in `tools/messages/*.json`; regenerate with
   `node RonisMailMats/tools/gen_messages.js > RonisMailMats/Data/Messages.lua`,

@@ -345,8 +345,10 @@ function ns.BuildHubPage(page)
 
     Row(H:Check(page, page, "Send BoE green gear to enchanters", function() return not ns.db.noGreens end,
         function(v) ns.db.noGreens = (not v) or nil; Changed() end), nil, 22)
-    Row(H:Check(page, page, "Add a random message to drafts", function() return not ns.db.noMessage end,
-        function(v) ns.db.noMessage = (not v) or nil end), nil, 22)
+    Row(H:Check(page, page, "Add a random message to drafts", function() return ns.db.withMessage end,
+        function(v) ns.db.withMessage = v or nil end), nil, 22)
+    local warn = H:Label(page, "|cffffd100Note:|r " .. ns.MESSAGE_WARNING, "GameFontDisableSmall", w - 24)
+    Row(warn, 24, warn:GetStringHeight())
 
     local cod = H:Label(page, "Cash on delivery for greens to other players:")
     cod:SetPoint("TOPLEFT", page, "TOPLEFT", 4, -y - 4)

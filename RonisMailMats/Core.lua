@@ -699,10 +699,35 @@ function ns.RandomMessage(name, what)
     return text, i
 end
 
--- Puts a random message in the body. `force` (the New message button) also
--- replaces our own earlier message; text you typed is always left alone.
+ns.MESSAGE_WARNING = "A mailbox only holds so many mails; when it is full, new ones wait in a queue "
+    .. "until you empty it. A mail with only attachments disappears once you take them, but a mail "
+    .. "with a message stays in the inbox until you delete it by hand."
+
+-- A random subject for a mail of `prof` (Data/Subjects.lua).
+local lastSubject
+function ns.RandomSubject(prof, what)
+    local S = ns.SUBJECTS or {}
+    local list, class
+    if type(prof) == "string" then
+        list = S[prof]
+        class = prof:match("^(%a+) reagents$")
+        if class and not (ns.IsCustomGroup and ns.IsCustomGroup(prof)) then list = S.class else class = nil end
+    end
+    list = list or S.default
+    if not list or #list == 0 then return ((what or "mats"):gsub("^%l", string.upper)) end
+    local i = math.random(#list)
+    if #list > 1 and list[i] == lastSubject then i = (i % #list) + 1 end
+    lastSubject = list[i]
+    local text = list[i]:gsub("{class}", class or ""):gsub("{what}", what or "mats")
+    return (text:gsub("^%l", string.upper))
+end
+
+-- Puts a random message in the body (only when turned on: a mail with a
+-- body is not taken by "Open all" and must be emptied by hand). `force` (the
+-- New message button) also replaces our own earlier message; text you
+-- typed is always left alone.
 function ns.FillMessage(force)
-    if ns.db and ns.db.noMessage and not force then return end
+    if not (ns.db and ns.db.withMessage) and not force then return end
     local box = BodyBox()
     if not box then return end
     local current = box:GetText() or ""
@@ -801,7 +826,7 @@ local function Attach(name, prof)
     end
     if SendMailNameEditBox then SendMailNameEditBox:SetText(name) end
     local what = ns.What(prof)
-    if SendMailSubjectEditBox then SendMailSubjectEditBox:SetText((what:gsub("^%l", string.upper))) end
+    if SendMailSubjectEditBox then SendMailSubjectEditBox:SetText(ns.RandomSubject(prof, what)) end
     ns.lastDraft = { name = name, what = what }
     ns.FillMessage(false)
     local cod = ns.SetDraftCOD(name, greenValue)
@@ -964,12 +989,13 @@ SlashCmdList.RONISMAILMATS = function(msg)
         if ns.Refresh then ns.Refresh() end
     elseif cmd == "message" or cmd == "messages" then
         if arg == "off" then
-            ns.db.noMessage = true
+            ns.db.withMessage = nil
         elseif arg == "on" then
-            ns.db.noMessage = nil
+            ns.db.withMessage = true
         end
-        ns.Print(ns.db.noMessage and "Drafts get no message. /mailmats message on turns it back on."
+        ns.Print(not ns.db.withMessage and "Drafts get no message. /mailmats message on adds a random one."
             or ("Drafts get a random message (%d to pick from). /mailmats message off turns it off."):format(#(ns.MESSAGES or {})))
+        if ns.db.withMessage then ns.Print(ns.MESSAGE_WARNING) end
     elseif cmd == "minimap" then
         ns.SetMinimapShown(not RonisHub:ButtonShown())
         ns.Print(RonisHub:ButtonShown() and "Minimap button shown." or "Minimap button hidden. /mailmats minimap shows it again.")

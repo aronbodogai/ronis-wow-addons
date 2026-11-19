@@ -13,6 +13,7 @@ RonisHub.lua
 Data\Reagents.lua
 Data\SkillItems.lua
 Data\Messages.lua
+Data\Subjects.lua
 Data\Crates.lua
 Data\ClassReagents.lua
 Core.lua

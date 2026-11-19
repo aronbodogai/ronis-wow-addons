@@ -19,8 +19,9 @@ press Send yourself, so you always see the draft first.
   its bag slot and a **Send upgrades** button.
 - Friends and guildies can be recipients too, and so can groups of them.
   Greens sent to other players can ask cash on delivery.
-- Every draft gets a random message in the mail body, from a pirate, a
-  grumpy dwarf, a secret agent and more.
+- Every draft gets a random subject for what it holds. Turn on random
+  messages in the mail body too, from a pirate, a grumpy dwarf, a secret
+  agent and more.
 
 **One minimap button for all Roni's addons:** click it for a window with a
 tab per addon you have installed. The MailMats tab has the groups,

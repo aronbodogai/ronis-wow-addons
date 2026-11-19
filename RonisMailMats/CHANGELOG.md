@@ -9,6 +9,13 @@
   Fish Scales go to your shaman, Arcane Powder and runes to your mage,
   candles to your priest, and so on. The button only shows when you carry
   some. Reagents your own class uses stay in your bags.
+- **Random subjects.** Each draft gets one of 12 subjects for what it
+  holds: one list per profession and skill, plus upgrades, class reagents
+  and mixed mails.
+- **Mail messages are now off by default.** A mail with a message is not
+  deleted when you take its items, so it fills the inbox until you delete
+  it, and a full inbox queues new mail. Turn them on with the checkbox on
+  the MailMats tab (it explains this) or `/mailmats message on`.
 
 ## v0.13.0
 
